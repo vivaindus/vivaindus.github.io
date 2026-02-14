@@ -11,8 +11,8 @@ const navLinks = [
     { name: 'PASSWORD', href: '/passwordgen' },
     { name: 'WORD COUNT', href: '/wordcounter' },
     { name: 'QR GEN', href: '/qrcode' },
-    { name: 'PERCENTAGE', href: '/percentagecalculator' }, // App 9
-    { name: 'TASKS', href: '/tasklist' },                  // App 10
+    { name: 'PERCENTAGE', href: '/percentagecalculator' },
+    { name: 'TASK LIST', href: '/tasklist' }, // The 10th App
 ];
 
 export default function ToolboxLayout({ children, title, description }) {
