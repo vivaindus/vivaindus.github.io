@@ -7,7 +7,10 @@ const navLinks = [
     { name: 'BMI CALC', href: '/bmicalculator' },
     { name: 'AGE CALC', href: '/agecalculator' },
     { name: 'REACTION', href: '/reactiontest' },
-    // When we build App 5, you just add it here!
+    { name: 'UNIT CONV', href: '/unitconverter' },
+    { name: 'PASSWORD', href: '/passwordgen' },
+    { name: 'WORD COUNT', href: '/wordcounter' }, // NEW
+    { name: 'QR GEN', href: '/qrcode' },         // NEW
 ];
 
 export default function ToolboxLayout({ children, title, description }) {
