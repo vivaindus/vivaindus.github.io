@@ -18,15 +18,15 @@ export default function Contact() {
 
                 <div style={{ background: '#1e293b', padding: '30px', borderRadius: '24px', border: '1px solid #334155', marginBottom: '20px' }}>
                     <h3 style={{ color: '#38bdf8' }}>WhatsApp Support</h3>
-                    <p>For immediate assistance with orders:</p>
-                    <a href="https://wa.me/919074799742" target="_blank" style={{ display: 'inline-block', marginTop: '10px', background: '#25D366', color: '#fff', padding: '12px 30px', borderRadius: '50px', textDecoration: 'none', fontWeight: 'bold' }}>
+                    <p>For immediate assistance with apps:</p>
+                    <a href="https://wa.me/971543768200" target="_blank" style={{ display: 'inline-block', marginTop: '10px', background: '#25D366', color: '#fff', padding: '12px 30px', borderRadius: '50px', textDecoration: 'none', fontWeight: 'bold' }}>
                         Chat on WhatsApp
                     </a>
                 </div>
 
                 <div style={{ background: '#1e293b', padding: '30px', borderRadius: '24px', border: '1px solid #334155' }}>
                     <h3 style={{ color: '#38bdf8' }}>Email Address</h3>
-                    <p>For business inquiries:</p>
+                    <p>For inquiries:</p>
                     <p style={{ fontWeight: 'bold', fontSize: '1.2rem', marginTop: '10px' }}>support@shbstores.com</p>
                 </div>
             </div>
