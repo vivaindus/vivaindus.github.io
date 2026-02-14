@@ -22,6 +22,8 @@ export default function ToolboxLayout({ children, title, description }) {
             <Head>
                 <title>{title} | SHB ToolBox</title>
                 <meta name="description" content={description} />
+                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8152928186282906"
+     crossorigin="anonymous"></script>
             </Head>
 
             {/* SHARED NAVIGATION */}
