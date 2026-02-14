@@ -1,5 +1,6 @@
 import React from 'react';
 import Head from 'next/head';
+import Link from 'next/link'; // IMPORT LINK COMPONENT
 
 // --- NAV LINKS ---
 const navLinks = [
@@ -28,9 +29,9 @@ export default function ToolboxLayout({ children, title, description }) {
                 <span style={{ fontWeight: 'bold', fontSize: '1.2rem', color: '#38bdf8', marginRight: '20px', whiteSpace: 'nowrap' }}>SHB ToolBox</span>
                 <div style={{ display: 'flex', gap: '15px' }}>
                     {navLinks.map((link) => (
-                        <a key={link.href} href={link.href} style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                        <Link key={link.href} href={link.href} style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
                             {link.name}
-                        </a>
+                        </Link>
                     ))}
                 </div>
             </nav>
@@ -39,17 +40,17 @@ export default function ToolboxLayout({ children, title, description }) {
                 {children}
             </main>
 
-            {/* SHARED FOOTER - Updated with About Us */}
+            {/* SHARED FOOTER */}
             <footer style={{ textAlign: 'center', padding: '40px', color: '#475569', fontSize: '0.8rem', borderTop: '1px solid #1e293b', marginTop: '40px' }}>
                 <div style={{ marginBottom: '15px' }}>
                     {navLinks.map((link) => (
-                        <a key={link.href} href={link.href} style={{ color: '#94a3b8', textDecoration: 'none', margin: '0 10px' }}>{link.name}</a>
+                        <Link key={link.href} href={link.href} style={{ color: '#94a3b8', textDecoration: 'none', margin: '0 10px' }}>{link.name}</Link>
                     ))}
                 </div>
                 <div style={{ marginBottom: '15px' }}>
-                    <a href="/about" style={{ color: '#38bdf8', textDecoration: 'none', margin: '0 10px' }}>About Us</a>
-                    <a href="/privacy" style={{ color: '#38bdf8', textDecoration: 'none', margin: '0 10px' }}>Privacy Policy</a>
-                    <a href="/contact" style={{ color: '#38bdf8', textDecoration: 'none', margin: '0 10px' }}>Contact Us</a>
+                    <Link href="/about" style={{ color: '#38bdf8', textDecoration: 'none', margin: '0 10px' }}>About Us</Link>
+                    <Link href="/privacy" style={{ color: '#38bdf8', textDecoration: 'none', margin: '0 10px' }}>Privacy Policy</Link>
+                    <Link href="/contact" style={{ color: '#38bdf8', textDecoration: 'none', margin: '0 10px' }}>Contact Us</Link>
                 </div>
                 &copy; 2024 SHB ToolBox - Professional Utility Hub
             </footer>
