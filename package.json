@@ -12,6 +12,7 @@
     "@supabase/supabase-js": "^2.39.0",
     "glightbox": "^3.2.0",
     "html-to-image": "^1.11.13",
+    "jszip": "^3.10.1",
     "next": "14.1.0",
     "papaparse": "^5.4.1",
     "react": "^18",
