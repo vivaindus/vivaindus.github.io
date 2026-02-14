@@ -125,6 +125,38 @@ export default function QRCodeGen() {
                     >
                         DOWNLOAD {lines.length > 1 ? `ZIP (${lines.length} QR CODES)` : 'PNG IMAGE'}
                     </button>
+                    {/* SEO CONTENT SECTION - MANDATORY FOR ADSENSE */}
+<div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8' }}>
+    <h2 style={{ color: '#38bdf8' }}>Professional Bulk QR Code Generator</h2>
+    <p>
+        The SHB Bulk QR Studio is a powerful utility designed for businesses and creators who need to generate 
+        high-quality QR codes in large volumes. Unlike standard generators, our tool allows you to input 
+        multiple lines of data and export them all at once into a single ZIP file.
+    </p>
+
+    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Supported QR Code Types</h3>
+    <ul>
+        <li><strong>Standard & Model 2:</strong> Perfect for URLs and website links.</li>
+        <li><strong>vCard:</strong> Instantly share contact details like name and phone number.</li>
+        <li><strong>Wi-Fi:</strong> Help guests connect to your network without typing passwords.</li>
+        <li><strong>Location:</strong> Link directly to GPS coordinates on Google Maps.</li>
+    </ul>
+
+    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Why Privacy Matters</h3>
+    <p>
+        At SHB ToolBox, your data privacy is our priority. This QR generator processes your information 
+        locally in your browser. We do not store the text or URLs you enter in our database, making this 
+        one of the most secure ways to generate QR codes for sensitive information.
+    </p>
+
+    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>How to generate QR codes in bulk?</h3>
+    <ol>
+        <li>Select the type of QR code you need (Standard, Wi-Fi, etc.).</li>
+        <li>Enter your data in the text area, putting each new code on a separate line.</li>
+        <li>Choose your preferred color to match your branding.</li>
+        <li>Click "Download ZIP" to receive all your images in one organized folder.</li>
+    </ol>
+</div>
                 </div>
             </div>
         </ToolboxLayout>

@@ -76,6 +76,40 @@ export default function BMICalculator() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0' }}><span>Obese</span><span style={{ color: '#f87171' }}>&gt; 30.0</span></div>
                     </div>
                 </div>
+                {/* --- SEO CONTENT SECTION START --- */}
+                <div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8' }}>
+                    <h2 style={{ color: '#38bdf8' }}>Understanding Your Body Mass Index (BMI)</h2>
+                    <p>
+                        The SHB BMI Calculator is a free health utility designed to help you understand your body composition based on your height and weight. 
+                        BMI is a widely used screening tool by healthcare professionals to determine if an individual is within a healthy weight range 
+                        for their height.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>What does your BMI score mean?</h3>
+                    <p>
+                        Your BMI score is categorized into four main groups. Understanding these can help you make informed decisions about your fitness and nutrition:
+                    </p>
+                    <ul>
+                        <li><strong>Underweight (Below 18.5):</strong> This may indicate that you are not consuming enough calories or may have an underlying health concern. We recommend focusing on nutrient-dense meals.</li>
+                        <li><strong>Normal Weight (18.5 – 24.9):</strong> This range is associated with the lowest risk of heart disease and other weight-related health issues.</li>
+                        <li><strong>Overweight (25.0 – 29.9):</strong> Being in this category may increase the strain on your cardiovascular system. Small lifestyle changes like increasing daily steps can be very effective.</li>
+                        <li><strong>Obese (30.0 or Higher):</strong> This category suggests a higher risk of health conditions such as Type 2 diabetes and hypertension.</li>
+                    </ul>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Is BMI a perfect measurement?</h3>
+                    <p>
+                        While BMI is an excellent general guide, it is important to note that it does not directly measure body fat percentage. 
+                        Athletes with high muscle mass may receive an "Overweight" score even if they have low body fat. This tool should be used 
+                        as a starting point for health discussions with your doctor.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Why use SHB ToolBox for health calculations?</h3>
+                    <p>
+                        Our BMI Calculator provides personalized tips based on your specific score, giving you actionable advice immediately. 
+                        Most importantly, your weight and height data is never stored on our servers—it is processed locally for your privacy.
+                    </p>
+                </div>
+                {/* --- SEO CONTENT SECTION END --- */}
             </div>
         </ToolboxLayout>
     );
