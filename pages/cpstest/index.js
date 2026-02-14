@@ -131,6 +131,10 @@ export default function CPSTest() {
 
             <footer style={{ textAlign: 'center', padding: '40px', color: '#475569', fontSize: '0.8rem' }}>
                 &copy; 2024 SHB ToolBox - Free Web Utilities
+                <div style={{ marginTop: '15px' }}>
+    <a href="/privacy" style={{ color: '#94a3b8', textDecoration: 'none', margin: '0 10px' }}>Privacy Policy</a>
+    <a href="/contact" style={{ color: '#94a3b8', textDecoration: 'none', margin: '0 10px' }}>Contact Us</a>
+</div>
             </footer>
         </div>
     );

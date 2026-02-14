@@ -132,6 +132,10 @@ export default function BMICalculator() {
 
             <footer style={{ textAlign: 'center', padding: '20px', color: '#475569', fontSize: '0.8rem' }}>
                 &copy; 2024 SHB ToolBox - Data source: WHO Standard Guidelines
+                <div style={{ marginTop: '15px' }}>
+    <a href="/privacy" style={{ color: '#94a3b8', textDecoration: 'none', margin: '0 10px' }}>Privacy Policy</a>
+    <a href="/contact" style={{ color: '#94a3b8', textDecoration: 'none', margin: '0 10px' }}>Contact Us</a>
+</div>
             </footer>
 
             <style jsx>{`
