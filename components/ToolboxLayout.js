@@ -9,8 +9,10 @@ const navLinks = [
     { name: 'REACTION', href: '/reactiontest' },
     { name: 'UNIT CONV', href: '/unitconverter' },
     { name: 'PASSWORD', href: '/passwordgen' },
-    { name: 'WORD COUNT', href: '/wordcounter' }, // NEW
-    { name: 'QR GEN', href: '/qrcode' },         // NEW
+    { name: 'WORD COUNT', href: '/wordcounter' },
+    { name: 'QR GEN', href: '/qrcode' },
+    { name: 'PERCENTAGE', href: '/percentagecalculator' }, // App 9
+    { name: 'TASKS', href: '/tasklist' },                  // App 10
 ];
 
 export default function ToolboxLayout({ children, title, description }) {
