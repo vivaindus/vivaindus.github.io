@@ -170,10 +170,32 @@ export default function ShifaStore() {
     return (
         <div className="shifa-app-root">
             <Head>
-                <title>IndusViva Shopping | SHB Stores</title>
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
-            </Head>
+    <title>Buy IndusViva Products Online | Shifa Stores - Official Partner</title>
+    <meta name="description" content="Shop authentic IndusViva products at Shifa Stores. Get iPulse, iGlow, iCoffee, iCare, and iSlim with exclusive discounts. Fast delivery and secure WhatsApp ordering." />
+    
+    {/* 1. GOOGLE SEARCH CONSOLE TAG - PASTE YOUR COPIED TAG BELOW */}
+    <meta name="google-site-verification" content="rJgnMJfb7OV2Y0b2XclACE9iMuEBexBXkSx6uLvt5us" />
+
+    {/* 2. GOOGLE ANALYTICS (GA4) */}
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-PR9MHNRH0R"></script>
+    <script dangerouslySetInnerHTML={{
+        __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-PR9MHNRH0R');
+        `,
+    }} />
+
+    <meta name="keywords" content="IndusViva, iPulse, iGlow, iCoffee, iCare, iSlim, Shifa Stores, wellness products, buy ipulse online india" />
+    <meta property="og:title" content="Shifa Stores | Premium Health & Wellness" />
+    <meta property="og:description" content="Official partner for IndusViva. Shop iPulse, iGlow and more with exclusive offers." />
+    <meta property="og:image" content="/vivaIndus/images/banner1.jpg" />
+    <meta property="og:url" content="https://shbstores.com/vivaIndus" />
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
+</Head>
 
             {/* 1. STICKY HEADER */}
             <header className="main-header">
