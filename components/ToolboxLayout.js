@@ -1,7 +1,7 @@
 import React from 'react';
 import Head from 'next/head';
 
-// --- ADD NEW APPS HERE IN THE FUTURE ---
+// --- NAV LINKS ---
 const navLinks = [
     { name: 'CPS TEST', href: '/cpstest' },
     { name: 'BMI CALC', href: '/bmicalculator' },
@@ -12,7 +12,7 @@ const navLinks = [
     { name: 'WORD COUNT', href: '/wordcounter' },
     { name: 'QR GEN', href: '/qrcode' },
     { name: 'PERCENTAGE', href: '/percentagecalculator' },
-    { name: 'TASK LIST', href: '/tasklist' }, // The 10th App
+    { name: 'TASK LIST', href: '/tasklist' },
 ];
 
 export default function ToolboxLayout({ children, title, description }) {
@@ -35,12 +35,11 @@ export default function ToolboxLayout({ children, title, description }) {
                 </div>
             </nav>
 
-            {/* PAGE CONTENT GOES HERE */}
             <main style={{ minHeight: '80vh' }}>
                 {children}
             </main>
 
-            {/* SHARED FOOTER */}
+            {/* SHARED FOOTER - Updated with About Us */}
             <footer style={{ textAlign: 'center', padding: '40px', color: '#475569', fontSize: '0.8rem', borderTop: '1px solid #1e293b', marginTop: '40px' }}>
                 <div style={{ marginBottom: '15px' }}>
                     {navLinks.map((link) => (
@@ -48,6 +47,7 @@ export default function ToolboxLayout({ children, title, description }) {
                     ))}
                 </div>
                 <div style={{ marginBottom: '15px' }}>
+                    <a href="/about" style={{ color: '#38bdf8', textDecoration: 'none', margin: '0 10px' }}>About Us</a>
                     <a href="/privacy" style={{ color: '#38bdf8', textDecoration: 'none', margin: '0 10px' }}>Privacy Policy</a>
                     <a href="/contact" style={{ color: '#38bdf8', textDecoration: 'none', margin: '0 10px' }}>Contact Us</a>
                 </div>
