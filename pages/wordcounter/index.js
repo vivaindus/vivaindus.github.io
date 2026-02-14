@@ -41,6 +41,44 @@ export default function WordCounter() {
                         </div>
                     </div>
                 </div>
+                {/* --- SEO CONTENT SECTION START --- */}
+                <div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8', textAlign: 'left' }}>
+                    <h2 style={{ color: '#38bdf8' }}>Professional Content Analysis & Word Counter</h2>
+                    <p>
+                        The SHB Word Counter is an essential utility for writers, students, and SEO professionals. 
+                        In digital publishing, meeting specific length requirements is crucial—whether you are 
+                        writing a university essay, a meta-description for a website, or a social media post. 
+                        Our tool provides a real-time, comprehensive breakdown of your text's structure.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Advanced Metrics for Better Writing</h3>
+                    <p>
+                        Go beyond basic counting with our four-point analysis system:
+                    </p>
+                    <ul>
+                        <li><strong>Precise Word Count:</strong> Perfect for tracking progress against academic assignments or freelance writing word-counts.</li>
+                        <li><strong>Character Tracking:</strong> Crucial for social media managers working within strict limits for platforms like X (Twitter), LinkedIn, and Instagram.</li>
+                        <li><strong>Sentence Analysis:</strong> Helps you understand the complexity and readability of your content by tracking how many sentences you’ve structured.</li>
+                        <li><strong>Estimated Reading Time:</strong> Based on the standard human reading speed of 200 words per minute, this metric helps bloggers and email marketers estimate how long it will take their audience to consume their content.</li>
+                    </ul>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Designed for SEO & Digital Marketing</h3>
+                    <p>
+                        Search engine algorithms often favor content that falls within specific length ranges. Use the SHB 
+                        Word Counter to ensure your blog intros are concise and your long-form articles hit the necessary 
+                        benchmarks for high ranking. The real-time update logic allows you to edit and trim your 
+                        paragraphs while watching the numbers adjust instantly.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Privacy & Intellectual Property</h3>
+                    <p>
+                        Your writing is your property. Unlike many online word counters that save your text to their 
+                        database for "analysis," the SHB ToolBox operates entirely on a <strong>Privacy-First</strong> 
+                        model. Your text is never sent to our servers, never stored in Supabase, and never seen 
+                        by anyone but you. All counting logic happens directly inside your browser.
+                    </p>
+                </div>
+                {/* --- SEO CONTENT SECTION END --- */}
             </div>
         </ToolboxLayout>
     );

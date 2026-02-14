@@ -56,6 +56,49 @@ export default function UnitConverter() {
                         </select>
                     </div>
                 </div>
+                {/* --- SEO CONTENT SECTION START --- */}
+                <div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8', textAlign: 'left' }}>
+                    <h2 style={{ color: '#38bdf8' }}>Professional Global & Regional Unit Conversion</h2>
+                    <p>
+                        The SHB Unit Converter Pro is a comprehensive conversion utility designed for engineers, students, and 
+                        real estate professionals. In a globalized world, the ability to switch between metric and imperial 
+                        systems—or even specialized regional units—is essential for accuracy in technical and commercial work.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Multi-Category Conversion Logic</h3>
+                    <p>
+                        Our tool handles four distinct categories of measurement with high-precision mathematical scaling:
+                    </p>
+                    <ul>
+                        <li><strong>Length & Distance:</strong> Instantly convert between Meters, Kilometers, Miles, and Feet. Whether you are calculating travel distances or architectural measurements, our tool provides accuracy up to four decimal places.</li>
+                        <li><strong>Area (Including Cents & Acres):</strong> Specialized for real estate, we include conversion for "Cents"—a vital unit in South Asian land measurement—alongside standard Acres and Square Feet.</li>
+                        <li><strong>Weight & Mass:</strong> Includes standard Kilograms and Pounds, as well as <strong>Carats</strong> for professionals in the jewelry and gemstone industry.</li>
+                        <li><strong>Digital Data:</strong> Essential for IT professionals to calculate storage capacities across Megabytes (MB), Gigabytes (GB), and Terabytes (TB).</li>
+                    </ul>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Precision and Floating-Point Accuracy</h3>
+                    <p>
+                        Manual conversion often leads to rounding errors that can compromise technical data. SHB ToolBox 
+                        uses a centralized unit-ratio database. This means all conversions are first normalized to a base unit 
+                        (like the Meter or Kilogram) before being calculated into the target unit, ensuring the highest possible 
+                        consistency across all calculations.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>User-Centric Design and Usage Hints</h3>
+                    <p>
+                        We have included an optional "Usage Hints" panel to assist beginners in navigating complex units like 
+                        Area and Data. The "Instant-Update" logic means you don't have to click a "Calculate" button—the result 
+                        changes in real-time as you type, saving you time during heavy data-entry tasks.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Privacy Commitment</h3>
+                    <p>
+                        Just like our other professional utilities, the Unit Converter Pro executes all mathematical logic 
+                        locally on your device. No measurement data is transmitted to our servers or stored in our 
+                        Supabase database. Your work remains private, secure, and fast.
+                    </p>
+                </div>
+                {/* --- SEO CONTENT SECTION END --- */}
             </div>
         </ToolboxLayout>
     );

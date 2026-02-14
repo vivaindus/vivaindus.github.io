@@ -151,6 +151,52 @@ export default function TaskList() {
                         </button>
                     </div>
                 )}
+                {/* --- SEO CONTENT SECTION START --- */}
+                <div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8', textAlign: 'left' }}>
+                    <h2 style={{ color: '#38bdf8' }}>Smart Task Management for Daily Productivity</h2>
+                    <p>
+                        The SHB Smart Task Manager is more than just a simple to-do list. It is a productivity-focused utility 
+                        designed to help you organize your daily goals, prioritize your workload, and visualize your progress 
+                        in real-time. Whether you are managing a complex project or simply keeping track of household chores, 
+                        our tool ensures that your focus remains on what matters most.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Priority-Based Organization</h3>
+                    <p>
+                        Not all tasks are created equal. Effective time management requires the ability to distinguish between 
+                        urgent requirements and minor tasks. Our manager allows you to assign three distinct priority levels:
+                    </p>
+                    <ul>
+                        <li><strong>High Priority:</strong> Tasks that require immediate attention and impact your primary goals.</li>
+                        <li><strong>Medium Priority:</strong> Important tasks that should be completed once high-priority items are addressed.</li>
+                        <li><strong>Low Priority:</strong> Non-urgent tasks or "nice-to-have" goals for your spare time.</li>
+                    </ul>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Unique Feature: Export Your List to PNG</h3>
+                    <p>
+                        One of the standout features of the SHB ToolBox Task Manager is the <strong>PNG Export utility</strong>. 
+                        With a single click, you can transform your digital list into a high-quality image file. This is perfect for 
+                        setting your daily goals as a phone wallpaper, printing a physical checklist, or sharing your progress 
+                        with team members via messaging apps without needing them to log into a platform.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Privacy and Local Data Integrity</h3>
+                    <p>
+                        Your daily schedule and personal plans are private. Unlike traditional "cloud-based" task managers 
+                        that store your data on their servers, the SHB Task Manager works entirely on your device. 
+                        Using advanced <strong>LocalStorage technology</strong>, your tasks are saved directly in your 
+                        browser. This means you can close the tab, restart your computer, and return to find your list 
+                        exactly as you left it—all without your data ever being uploaded to the internet or our database.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Visual Progress Tracking</h3>
+                    <p>
+                        Psychologically, seeing progress motivates us to finish. Our tool includes an automated 
+                        progress bar that calculates the percentage of completed tasks. As you check off your goals, 
+                        the bar fills up, giving you a satisfying visual representation of your daily achievements.
+                    </p>
+                </div>
+                {/* --- SEO CONTENT SECTION END --- */}
             </div>
         </ToolboxLayout>
     );

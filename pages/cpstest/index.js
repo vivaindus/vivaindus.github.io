@@ -131,6 +131,51 @@ export default function CPSTest() {
                         </div>
                     )}
                 </div>
+                {/* --- SEO CONTENT SECTION START --- */}
+                <div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8', textAlign: 'left' }}>
+                    <h2 style={{ color: '#38bdf8' }}>What is a CPS Test?</h2>
+                    <p>
+                        CPS stands for <strong>Clicks Per Second</strong>. The SHB CPS Test is a professional speed-testing utility 
+                        designed to measure your mouse clicking frequency over a 10-second interval. Whether you are a competitive 
+                        gamer looking to improve your "jitter clicking" or just testing the responsiveness of a new gaming mouse, 
+                        our tool provides precise, real-time data.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Understanding Your Score and Ranks</h3>
+                    <p>
+                        Once the 10-second timer expires, our system calculates your average speed and assigns a rank based on human performance benchmarks:
+                    </p>
+                    <ul>
+                        <li><strong>Turtle (0-5 CPS):</strong> A standard speed for casual browsing and office work.</li>
+                        <li><strong>Rabbit (5-8 CPS):</strong> Above average speed, common among regular PC gamers.</li>
+                        <li><strong>Cheetah (8-10 CPS):</strong> Advanced speed, often achieved by professionals using specialized clicking techniques.</li>
+                        <li><strong>Godly (10+ CPS):</strong> Elite performance. This level usually requires mastering "butterfly clicking" or "drag clicking."</li>
+                    </ul>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Why Gaming Performance Depends on CPS</h3>
+                    <p>
+                        In many fast-paced games like <em>Minecraft</em>, <em>League of Legends</em>, or first-person shooters, 
+                        your clicking speed can be the difference between winning and losing. A higher CPS allows for faster 
+                        action triggering and improved combat mechanics. Using this test regularly helps you build finger 
+                        strength and muscle memory.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Local Data and Performance Tracking</h3>
+                    <p>
+                        At SHB ToolBox, we value your privacy and progress. This app uses your browser's local storage 
+                        to keep track of your high scores and your last five trials. No clicking data is sent to our servers, 
+                        and your personal records are stored only on your device. This allows you to practice offline 
+                        and track your improvement over time without needing an account.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Tips to Improve Your Clicking Speed</h3>
+                    <ol>
+                        <li><strong>Use a Gaming Mouse:</strong> Higher polling rates result in more accurate click registration.</li>
+                        <li><strong>Relax Your Hand:</strong> Tension slows down your muscles. Try to keep your wrist steady while your finger does the work.</li>
+                        <li><strong>Try Different Grips:</strong> Many high-CPS players prefer the "Claw Grip" for faster tapping.</li>
+                    </ol>
+                </div>
+                {/* --- SEO CONTENT SECTION END --- */}
             </div>
 
             <style jsx>{`

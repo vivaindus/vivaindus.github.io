@@ -81,6 +81,53 @@ export default function ReactionTest() {
                         </div>
                     ))}
                 </div>
+                {/* --- SEO CONTENT SECTION START --- */}
+                <div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8', textAlign: 'left' }}>
+                    <h2 style={{ color: '#38bdf8' }}>Professional Human Reaction Time Test</h2>
+                    <p>
+                        The SHB Reaction Test is a high-precision utility designed to measure your neurological response time in milliseconds (ms). 
+                        Reaction time is the interval between the presentation of a stimulus (the color change) and the beginning of the 
+                        response (your mouse click). This tool is widely used by gamers, athletes, and individuals looking to track 
+                        their cognitive alertness.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>What is an Average Reaction Time?</h3>
+                    <p>
+                        According to various data studies, the average human reaction time to a visual stimulus is approximately 
+                        <strong>200ms to 250ms</strong>. However, professional eSports players often achieve scores below 180ms. 
+                        Your score can be influenced by several factors:
+                    </p>
+                    <ul>
+                        <li><strong>Hydration and Fatigue:</strong> A tired brain processes visual signals significantly slower.</li>
+                        <li><strong>Hardware Latency:</strong> Your monitor's refresh rate and your mouse's polling rate can add a few milliseconds to your final score.</li>
+                        <li><strong>Age:</strong> Research shows that reaction times peak in the early 20s and gradually increase over time.</li>
+                    </ul>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Customizable Visual Testing</h3>
+                    <p>
+                        Unique to the SHB ToolBox, we allow you to set your own "GO" color. This is not just for aesthetics; different 
+                        wavelengths of light can affect how quickly the human eye perceives a change. Some individuals respond faster to 
+                        Green (high visibility), while others prefer Neon Blue or Red. Use the color picker above to find the stimulus 
+                        that works best for your eyes.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Scientific Accuracy and Privacy</h3>
+                    <p>
+                        Our tool uses the high-resolution `Date.now()` timestamp method to ensure accuracy down to a single millisecond. 
+                        To ensure zero network latency during your test, the logic is executed entirely within your browser. 
+                        This also means your reaction time records are private—stored only in your local browser history—ensuring 
+                        that SHB ToolBox remains a secure environment for self-improvement.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>How to Use the Test</h3>
+                    <ol>
+                        <li>Click the testing area to begin.</li>
+                        <li>Wait for the screen to turn from red to your selected "GO" color.</li>
+                        <li>Click as fast as you can once the color changes.</li>
+                        <li>Try to beat your Personal Best recorded at the bottom of the page!</li>
+                    </ol>
+                </div>
+                {/* --- SEO CONTENT SECTION END --- */}
             </div>
         </ToolboxLayout>
     );

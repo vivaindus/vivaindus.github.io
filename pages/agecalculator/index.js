@@ -57,6 +57,45 @@ export default function AgeCalculator() {
                         </div>
                     </div>
                 )}
+                {/* --- SEO CONTENT SECTION START --- */}
+                <div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8', textAlign: 'left' }}>
+                    <h2 style={{ color: '#38bdf8' }}>How Does the Age Calculator Work?</h2>
+                    <p>
+                        The SHB Age Calculator is a precision utility that determines the exact interval between your birth date and the current time. 
+                        While most people think of their age only in years, our tool breaks it down into months and days to give you a 
+                        chronological age reading that is accurate for legal documents, medical forms, or personal milestones.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Calculate Years, Months, and Days</h3>
+                    <p>
+                        Calculating age manually can be tricky because of the varying number of days in each month and the occurrence of leap years. 
+                        Our algorithm automatically adjusts for these factors:
+                    </p>
+                    <ul>
+                        <li><strong>Precise Years:</strong> Calculated based on the standard Gregorian calendar.</li>
+                        <li><strong>Month Tracking:</strong> Accounts for months with 28, 30, and 31 days to ensure your "month anniversary" is correct.</li>
+                        <li><strong>Next Birthday Countdown:</strong> We provide a live countdown so you know exactly how many days are left until your next celebration.</li>
+                    </ul>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Privacy and Security</h3>
+                    <p>
+                        We understand that your birth date is sensitive personal information. That is why the SHB ToolBox 
+                        processes all date calculations <strong>client-side</strong>. This means your birth date never leaves 
+                        your computer and is never saved to our database or Supabase records. You can use this tool with 
+                        complete peace of mind knowing your data is private.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Common Uses for the Age Calculator</h3>
+                    <p>
+                        This tool is perfect for:
+                    </p>
+                    <ol>
+                        <li>Filling out government or insurance forms that require exact chronological age.</li>
+                        <li>Calculating the age of babies or pets where "months" are just as important as years.</li>
+                        <li>Finding out exactly how many days you have been alive to celebrate "10,000 days" or other unique milestones.</li>
+                    </ol>
+                </div>
+                {/* --- SEO CONTENT SECTION END --- */}
             </div>
         </ToolboxLayout>
     );
