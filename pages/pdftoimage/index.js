@@ -1,10 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
-import * as pdfjsLib from 'pdfjs-dist';
 import JSZip from 'jszip';
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Dynamic import for pdfjs to avoid server-side errors
+const pdfjsLib = typeof window !== 'undefined' ? require('pdfjs-dist/build/pdf') : null;
+
+if (pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+}
 
 export default function PDFToImage() {
     const [pdfFile, setPdfFile] = useState(null);
