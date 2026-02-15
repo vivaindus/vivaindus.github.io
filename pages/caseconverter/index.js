@@ -127,9 +127,87 @@ export default function TextStudio() {
                 </div>
 
                 {/* SEO FOOTER */}
-                <div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.9rem', lineHeight: '1.6' }}>
-                    <h2 style={{ color: '#38bdf8' }}>The Ultimate Text Manipulation Suite</h2>
-                    <p>SHB Text Studio is a high-performance utility designed for developers and content creators. Whether you need to convert strings to <strong>camelCase</strong> for coding or clean up <strong>duplicate lines</strong> from a database export, our tool handles it all locally for maximum privacy.</p>
+                {/* --- COMPREHENSIVE SEO CONTENT SECTION --- */}
+                <div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8', textAlign: 'left' }}>
+                    <h2 style={{ color: '#38bdf8' }}>The Ultimate Professional Text Manipulation & Transformation Suite</h2>
+                    <p>
+                        The SHB Text Studio is a high-performance, all-in-one utility designed to bridge the gap between content creation and technical data processing. Whether you are a developer formatting code, an editor cleaning up a manuscript, or a data analyst organizing messy lists, our suite provides every essential transformation tool in a single, secure interface.
+                    </p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginTop: '30px' }}>
+                        <div>
+                            <h3 style={{ color: '#38bdf8', fontSize: '1.1rem' }}>Advanced Case Conversion</h3>
+                            <p>
+                                Move beyond simple uppercase and lowercase. Our engine supports technical naming conventions essential for modern programming and documentation:
+                            </p>
+                            <ul style={{ paddingLeft: '20px' }}>
+                                <li><strong>camelCase & PascalCase:</strong> Instantly format variables for JavaScript, Java, and C# development.</li>
+                                <li><strong>snake_case & kebab-case:</strong> Perfect for Python programming, CSS class naming, and SEO-friendly URL slug generation.</li>
+                                <li><strong>Sentence & Title Case:</strong> Automatically correct capitalization for blog posts, headers, and academic papers using intelligent grammar logic.</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 style={{ color: '#38bdf8', fontSize: '1.1rem' }}>Smart Text Sanitization</h3>
+                            <p>
+                                Cleaning "dirty" data from PDFs, emails, or old databases can take hours. Our cleanup tools do it in one click:
+                            </p>
+                            <ul style={{ paddingLeft: '20px' }}>
+                                <li><strong>Whitespace Management:</strong> Remove leading/trailing spaces or collapse multiple spaces into one.</li>
+                                <li><strong>Line Optimization:</strong> Strip empty lines, remove line breaks to create single-line strings, or add line numbers for easy referencing.</li>
+                                <li><strong>Quote Normalization:</strong> Convert "Smart Quotes" from word processors into straight quotes for code compatibility.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* --- COMPREHENSIVE SEO CONTENT SECTION --- */}
+                <div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8', textAlign: 'left' }}>
+                    <h2 style={{ color: '#38bdf8' }}>The Ultimate Professional Text Manipulation & Transformation Suite</h2>
+                    <p>
+                        The SHB Text Studio is a high-performance, all-in-one utility designed to bridge the gap between content creation and technical data processing. Whether you are a developer formatting code, an editor cleaning up a manuscript, or a data analyst organizing messy lists, our suite provides every essential transformation tool in a single, secure interface.
+                    </p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginTop: '30px' }}>
+                        <div>
+                            <h3 style={{ color: '#38bdf8', fontSize: '1.1rem' }}>Advanced Case Conversion</h3>
+                            <p>
+                                Move beyond simple uppercase and lowercase. Our engine supports technical naming conventions essential for modern programming and documentation:
+                            </p>
+                            <ul style={{ paddingLeft: '20px' }}>
+                                <li><strong>camelCase & PascalCase:</strong> Instantly format variables for JavaScript, Java, and C# development.</li>
+                                <li><strong>snake_case & kebab-case:</strong> Perfect for Python programming, CSS class naming, and SEO-friendly URL slug generation.</li>
+                                <li><strong>Sentence & Title Case:</strong> Automatically correct capitalization for blog posts, headers, and academic papers using intelligent grammar logic.</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 style={{ color: '#38bdf8', fontSize: '1.1rem' }}>Smart Text Sanitization</h3>
+                            <p>
+                                Cleaning "dirty" data from PDFs, emails, or old databases can take hours. Our cleanup tools do it in one click:
+                            </p>
+                            <ul style={{ paddingLeft: '20px' }}>
+                                <li><strong>Whitespace Management:</strong> Remove leading/trailing spaces or collapse multiple spaces into one.</li>
+                                <li><strong>Line Optimization:</strong> Strip empty lines, remove line breaks to create single-line strings, or add line numbers for easy referencing.</li>
+                                <li><strong>Quote Normalization:</strong> Convert "Smart Quotes" from word processors into straight quotes for code compatibility.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Data Organization & List Management</h3>
+                    <p>
+                        Text Studio includes powerful list-handling features. You can <strong>Sort Lines A-Z</strong> or Z-A instantly, which is vital for organizing CSV data or alphabetical lists. The <strong>Remove Duplicate Lines</strong> feature is a favorite for database administrators and marketers who need to clean up mailing lists or unique ID sets without using complex Excel formulas.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Real-Time Analysis and Export</h3>
+                    <p>
+                        Stay informed with our live stats header, tracking your word count, character count, and line count as you type. Once your text is perfectly formatted, use our <strong>Direct .TXT Download</strong> feature to save your work as a physical file, or use the 1-click clipboard utility to move your data back into your workflow.
+                    </p>
+
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Why Privacy-First Processing Matters</h3>
+                    <p>
+                        In the age of AI and cloud storage, your text data is often harvested for training or tracking. At SHB ToolBox, we use <strong>Client-Side JavaScript Logic</strong>. This means your text never leaves your computer. Whether you are formatting a sensitive legal document or a proprietary block of code, the transformation happens 100% locally. Your privacy is not just a feature; it is our architecture.
+                    </p>
+                </div>
                 </div>
             </div>
         </ToolboxLayout>
