@@ -143,16 +143,6 @@ export default function TextStudio() {
                         </div>
                     </div>
                 </div>
-                <div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8' }}>
-                    <h2 style={{ color: '#38bdf8' }}>The Definitive Tool for Professional Text Manipulation</h2>
-                    <p>The SHB Case Studio is an advanced productivity suite designed for writers, software engineers, and digital marketers who require precise control over their text data. Unlike basic converters, our platform combines complex case transformations with heavy-duty data cleaning features.</p>
-
-                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Integrated Case Logic & Naming Conventions</h3>
-                    <p>In modern workflows, case formatting is more than just aesthetics—it is a technical requirement. Our tool supports standard conventions like <strong>CamelCase</strong> and <strong>Snake_Case</strong> for developers, alongside <strong>Title Case</strong> for content creators. The smart toggle feature allows users to switch between formats and revert instantly without losing their original data.</p>
-
-                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Enterprise-Grade Cleanup & List Management</h3>
-                    <p>Cleaning messy data is a primary use case for professional editors. SHB Text Studio offers specialized utilities to <strong>remove empty lines</strong>, <strong>sort lines alphabetically</strong>, and <strong>normalize smart quotes</strong>. These tools are indispensable for cleaning up database exports or formatting text copied from inconsistent sources like PDF files.</p>
-                </div>
             </div>
         </ToolboxLayout>
     );
