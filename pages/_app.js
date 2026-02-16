@@ -4,7 +4,6 @@ import Script from 'next/script'
 function MyApp({ Component, pageProps }) {
   return (
     <>
-      {/* Official AdSense Integration - Removes "data-next-head" warning */}
       <Script
         id="adsense-id"
         async

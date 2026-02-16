@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Head from 'next/head';
 import ToolboxLayout from '../../components/ToolboxLayout';
 
 export default function GlobalInvoiceGenerator() {
@@ -34,7 +33,7 @@ export default function GlobalInvoiceGenerator() {
 
     // --- Persistence ---
     useEffect(() => {
-        const saved = localStorage.getItem('shb_invoice_master_v5');
+        const saved = localStorage.getItem('shb_invoice_final_v7');
         if (saved) {
             const parsed = JSON.parse(saved);
             setMeta(parsed.meta);
@@ -43,26 +42,20 @@ export default function GlobalInvoiceGenerator() {
     }, []);
 
     const saveSettings = () => {
-        localStorage.setItem('shb_invoice_master_v5', JSON.stringify({ meta, items }));
-        showToast('Business Data Saved Locally! ✅');
+        localStorage.setItem('shb_invoice_final_v7', JSON.stringify({ meta, items }));
+        showToast('Settings saved successfully! ✅');
     };
 
     const handleHardReset = () => {
-        if (window.confirm("RESET WORKSPACE? This will clear all data and delete your saved template.")) {
-            localStorage.removeItem('shb_invoice_master_v5');
+        if (window.confirm("CRITICAL: This will clear all data and reset the template. Continue?")) {
+            localStorage.removeItem('shb_invoice_final_v7');
             window.location.reload();
         }
     };
 
     // --- Item Update Logic ---
     const updateItem = (id, field, value) => {
-        const newItems = items.map(item => {
-            if (item.id === id) {
-                return { ...item, [field]: value };
-            }
-            return item;
-        });
-        setItems(newItems);
+        setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
     };
 
     // --- Math Engine ---
@@ -73,8 +66,8 @@ export default function GlobalInvoiceGenerator() {
     const totalVat = items.reduce((acc, i) => acc + calculateLineVat(i), 0);
     const grandTotal = subtotal + totalVat;
 
-    // --- Toast & Logo ---
     const showToast = (m) => { setNotification(m); setTimeout(() => setNotification(''), 3000); };
+    
     const handleLogo = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -90,65 +83,66 @@ export default function GlobalInvoiceGenerator() {
         const { jsPDF } = await import('jspdf');
         if (!invoiceRef.current) return;
 
-        showToast(`Rendering ${type.toUpperCase()}...`);
+        showToast(`Preparing ${type.toUpperCase()}...`);
 
         const canvas = await toCanvas(invoiceRef.current, {
             pixelRatio: 2.5, 
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            canvasWidth: pageSize === 'A4' ? 794 : 816 // Prevents horizontal clipping
         });
 
         const imgData = canvas.toDataURL('image/png', 1.0);
         const pdf = new jsPDF('p', 'mm', pageSize.toLowerCase());
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const imgWidth = pdfWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        const pageHeight = pdf.internal.pageSize.getHeight();
 
         if (type === 'png') {
             const link = document.createElement('a');
             link.download = `${meta.invoiceNum}.png`; link.href = imgData; link.click();
         } else {
-            let heightLeft = imgHeight;
+            let heightLeft = pdfHeight;
             let position = 0;
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pdfHeight;
+
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+            heightLeft -= pageHeight;
+
             while (heightLeft >= 0) {
-                position = heightLeft - imgHeight;
+                position = heightLeft - pdfHeight;
                 pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pdfHeight;
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+                heightLeft -= pageHeight;
             }
             pdf.save(`${meta.invoiceNum}.pdf`);
         }
-        showToast('Document Downloaded Successfully!');
+        showToast('Download Complete!');
     };
 
     return (
-        <ToolboxLayout title="Pro Tax Invoice Suite" description="Universal Tax Invoice Generator with UAE TRN support.">
+        <ToolboxLayout title="Pro Tax Invoice Generator" description="UAE FTA Compliant Multi-Page Tax Invoice Suite with TRN tracking.">
             <div style={{ maxWidth: '1500px', margin: '0 auto', padding: '20px' }}>
                 
                 {notification && <div style={toastStyle}>{notification}</div>}
 
-                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                     
                     {/* --- SIDEBAR --- */}
-                    <aside style={{ flex: '1', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '15px', position: 'sticky', top: '100px' }}>
+                    <aside style={{ flex: '1', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                         <div style={sidebarCard}>
-                            <h3 style={cardTitle}>Format & Compliance</h3>
-                            <label style={lCaption}>Precision</label>
+                            <h3 style={cardTitle}>Settings & Compliance</h3>
+                            <label style={lCaption}>Rounding Precision</label>
                             <select value={meta.decimals} onChange={(e)=>setMeta({...meta, decimals: parseInt(e.target.value)})} style={selStyle}>
-                                <option value={2}>2 Decimals</option>
-                                <option value={3}>3 Decimals</option>
-                                <option value={0}>0 Decimals</option>
+                                <option value={2}>2 Decimals (AED/USD)</option>
+                                <option value={3}>3 Decimals (OMR/BHD)</option>
                             </select>
 
-                            <label style={lCaption}>Page Size</label>
+                            <label style={lCaption}>Page Format</label>
                             <select value={pageSize} onChange={(e)=>setPageSize(e.target.value)} style={selStyle}>
-                                <option value="A4">A4 International</option>
+                                <option value="A4">A4 (International)</option>
                                 <option value="Letter">US Letter</option>
                             </select>
 
-                            <label style={lCaption}>Branding (Logo Upload)</label>
+                            <label style={lCaption}>Company Logo</label>
                             <input type="file" onChange={handleLogo} style={inpStyle} />
                             
                             <label style={lCaption}>Logo Location</label>
@@ -162,32 +156,20 @@ export default function GlobalInvoiceGenerator() {
                         <div style={sidebarCard}>
                             <button onClick={saveSettings} style={btnSave}>💾 SAVE AS DEFAULT</button>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
-                                <button onClick={() => exportFile('pdf')} style={btnExport}>📄 GET PDF</button>
-                                <button onClick={() => exportFile('png')} style={btnExport}>🖼️ GET PNG</button>
+                                <button onClick={() => exportFile('pdf')} style={btnExport}>📄 PDF</button>
+                                <button onClick={() => exportFile('png')} style={btnExport}>🖼️ PNG</button>
                             </div>
+                            <button onClick={handleHardReset} style={btnReset}>🗑️ RESET ALL</button>
                         </div>
-
-                        <button onClick={handleHardReset} style={btnReset}>🗑️ RESET ALL</button>
                     </aside>
 
-                    {/* --- PAPER CONTAINER --- */}
-                    <main style={{ 
-                        flex: '3', 
-                        minWidth: '0', // Important for flex wrapping
-                        background: '#334155', 
-                        padding: '40px 20px', 
-                        borderRadius: '12px', 
-                        display: 'flex', 
-                        flexDirection: 'column',
-                        alignItems: 'center', // Centers the paper
-                        overflowX: 'auto' // Allows scrolling if window is too small
-                    }}>
+                    {/* --- MAIN PAPER CONTAINER (PERFECTLY CENTERED) --- */}
+                    <main style={{ flex: '3', minWidth: '0', background: '#1e293b', padding: '40px 10px', borderRadius: '15px', display: 'flex', justifyContent: 'center', overflowX: 'auto' }}>
                         <div ref={invoiceRef} id="invoice-paper" style={{ 
                             ...paperStyle, 
                             width: pageSize === 'A4' ? '210mm' : '215.9mm',
                             minHeight: pageSize === 'A4' ? '297mm' : '279.4mm',
-                            margin: '0 auto', // Ensures equal side margins
-                            boxSizing: 'border-box'
+                            backgroundColor: '#ffffff'
                         }}>
                             
                             {/* Logo */}
@@ -247,17 +229,17 @@ export default function GlobalInvoiceGenerator() {
                                 </tbody>
                             </table>
 
-                            <button onClick={()=>setItems([...items, {id: Date.now(), code:'', desc:'', qty:1, price:0, vatRate:5}])} style={addLineBtn} className="no-print">+ Add New Item</button>
+                            <button onClick={()=>setItems([...items, {id: Date.now(), code:'', desc:'', qty:1, price:0, vatRate:5}])} style={addLineBtn} className="no-print">+ Add New Line</button>
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px' }}>
                                 <div style={{ width: '55%' }}>
                                     <span style={tagLabel}>NOTES & DECLARATIONS</span>
                                     <textarea value={meta.notes} onChange={(e)=>setMeta({...meta, notes: e.target.value})} style={notesArea} />
                                 </div>
-                                <div style={{ width: '240px' }}>
+                                <div style={{ width: '230px' }}>
                                     <div style={sumRow}><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
                                     <div style={sumRow}><span>Total VAT</span><span>{fmt(totalVat)}</span></div>
-                                    <div style={grandRow}><span>TOTAL ({meta.currency})</span><span style={{fontSize:'1.3rem'}}>{fmt(grandTotal)}</span></div>
+                                    <div style={grandRow}><span>TOTAL ({meta.currency})</span><span>{fmt(grandTotal)}</span></div>
                                 </div>
                             </div>
 
@@ -265,42 +247,50 @@ export default function GlobalInvoiceGenerator() {
                                 <input value={meta.footerMsg} onChange={(e)=>setMeta({...meta, footerMsg: e.target.value})} style={footerInp} />
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px', alignItems: 'center' }}>
                                     <input value={meta.footerUrl} onChange={(e)=>setMeta({...meta, footerUrl: e.target.value})} style={urlInp} />
-                                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Professional Document generated by shbstores.com</span>
+                                    <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>Generated Page 1 of 1</span>
                                 </div>
                             </div>
                         </div>
                     </main>
                 </div>
+
+                {/* --- PROFESSIONAL SEO CONTENT --- */}
+                <div style={{ marginTop: '80px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8' }}>
+                    <h2 style={{ color: '#38bdf8' }}>Professional Universal Tax Invoice Suite</h2>
+                    <p>
+                        The SHB Invoice Suite is engineered for international compliance across high-regulatory jurisdictions including the UAE (FTA), Saudi Arabia (ZATCA), and the broader GCC. Unlike basic templates, our generator enforces strict compliance while ensuring your financial documentation is private and legally sound.
+                    </p>
+                    <h3 style={{ color: '#38bdf8', marginTop: '20px' }}>Multi-Page Architecture & Data Security</h3>
+                    <p>
+                        By using localized client-side rendering, your data never leaves your computer. We provide granular control over decimal precision, mandatory TRN tracking, and intelligent multi-page PDF exporting that prevents item clipping across page breaks.
+                    </p>
+                </div>
             </div>
 
             <style jsx>{`
                 @media print { .no-print { display: none !important; } }
-                #invoice-paper { box-sizing: border-box; transition: box-shadow 0.3s; box-shadow: 0 0 20px rgba(0,0,0,0.3); }
+                #invoice-paper { box-sizing: border-box; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
                 #invoice-paper input, #invoice-paper textarea { 
                     color: #000 !important; 
                     background: transparent !important; 
-                    border: none; 
-                    outline: none; 
-                    font-family: inherit;
+                    border: none; outline: none; font-family: inherit;
                 }
-                #invoice-paper input:hover, #invoice-paper textarea:hover { 
-                    background: rgba(56, 189, 248, 0.05) !important; 
-                }
+                #invoice-paper input:hover, #invoice-paper textarea:hover { background: #f8fafc !important; }
             `}</style>
-        </Head>
+        </ToolboxLayout>
     );
 }
 
-// --- STYLES (Keep as you have them, with slight tweaks for alignment) ---
+// --- STYLES ---
 const sidebarCard = { background: '#1e293b', padding: '20px', borderRadius: '15px', border: '1px solid #334155', marginBottom: '15px' };
 const cardTitle = { color: '#38bdf8', fontSize: '0.9rem', margin: '0 0 15px 0' };
 const lCaption = { fontSize: '0.7rem', color: '#64748b', display: 'block', marginBottom: '5px' };
 const inpStyle = { width: '100%', background: '#0f172a', border: '1px solid #334155', padding: '10px', borderRadius: '8px', color: '#fff', fontSize: '0.85rem' };
 const selStyle = { ...inpStyle, cursor: 'pointer', marginBottom: '10px' };
-const paperStyle = { background: '#ffffff', color: '#000000', padding: '15mm', display: 'flex', flexDirection: 'column' };
-const titleInput = { fontSize: '2.5rem', fontWeight: '900', color: '#000', width: '100%', textTransform: 'uppercase' };
+const paperStyle = { background: '#ffffff', color: '#000000', padding: '20mm 15mm', display: 'flex', flexDirection: 'column' };
+const titleInput = { fontSize: '2.5rem', fontWeight: '900', color: '#000', width: '100%' };
 const companyTitle = { fontSize: '1.4rem', fontWeight: 'bold', width: '100%', marginTop: '10px' };
-const addrInput = { width: '100%', fontSize: '0.85rem', color: '#475569', height: '50px', marginTop: '5px' };
+const addrInput = { width: '100%', fontSize: '0.85rem', color: '#475569', height: '45px', marginTop: '5px' };
 const headerGrid = { display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #000', paddingBottom: '20px' };
 const trnLine = { fontSize: '0.85rem', fontWeight: 'bold', marginTop: '10px' };
 const trnInp = { borderBottom: '1px dashed #cbd5e1 !important', width: '180px', marginLeft: '5px' };
@@ -320,7 +310,7 @@ const grandRow = { display: 'flex', justifyContent: 'space-between', padding: '1
 const notesArea = { width: '100%', height: '80px', border: 'none', background: '#f8fafc', padding: '10px', fontSize: '0.85rem', borderRadius: '8px' };
 const paperFooter = { marginTop: 'auto', paddingTop: '40px', borderTop: '1px solid #eee' };
 const footerInp = { width: '100%', textAlign: 'center', fontSize: '0.95rem', fontWeight: 'bold' };
-const urlInp = { width: '50%', fontSize: '0.7rem', color: '#94a3b8' };
+const urlInp = { width: '40%', fontSize: '0.65rem', color: '#94a3b8', fontStyle: 'italic' };
 const btnSave = { width: '100%', background: '#34d399', color: '#0f172a', padding: '14px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', border: 'none' };
 const btnExport = { background: '#38bdf8', color: '#0f172a', padding: '12px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', border: 'none' };
 const btnReset = { width: '100%', background: 'none', border: '1px solid #f87171', color: '#f87171', padding: '10px', borderRadius: '10px', fontSize: '0.75rem', cursor: 'pointer' };
