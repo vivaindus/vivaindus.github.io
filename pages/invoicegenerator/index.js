@@ -1,170 +1,247 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
+import { jsPDF } from 'jspdf';
 
-export default function InvoiceGenerator() {
-    const [invoiceInfo, setInvoiceInfo] = useState({
+export default function ProfessionalInvoice() {
+    // --- State Management ---
+    const [businessData, setBusinessData] = useState({
+        logo: null,
+        logoAlign: 'flex-start',
+        companyName: 'SHB SOLUTIONS LTD',
+        companyAddress: '123 Business Way, Dubai, UAE',
+        invoiceTitle: 'INVOICE',
         invoiceNum: 'INV-1001',
         date: new Date().toISOString().split('T')[0],
-        company: 'Your Company Name',
-        client: 'Client Name',
-        taxRate: 5
+        clientName: 'Valued Client',
+        clientAddress: 'Client Office, Suite 404',
+        notes: 'Thank you for your business. Please pay within 15 days.',
+        taxRate: 5,
+        currency: '$'
     });
 
-    const [items, setItems] = useState([
-        { id: 1, desc: 'Web Design Service', qty: 1, price: 500 }
-    ]);
+    const [columns, setColumns] = useState({
+        item: 'Description',
+        qty: 'Qty',
+        price: 'Unit Price',
+        total: 'Amount'
+    });
 
+    const [items, setItems] = useState([{ id: 1, desc: 'Professional Consultation', qty: 1, price: 150 }]);
+    const [notification, setNotification] = useState('');
     const invoiceRef = useRef(null);
 
-    const handleInfoChange = (e) => {
-        setInvoiceInfo({ ...invoiceInfo, [e.target.name]: e.target.value });
+    // --- Persistence (Local Storage) ---
+    useEffect(() => {
+        const saved = localStorage.getItem('shb_invoice_pro_data');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            setBusinessData(parsed.business);
+            setColumns(parsed.cols);
+            setItems(parsed.items);
+        }
+    }, []);
+
+    const saveLocally = () => {
+        const dataToSave = { business: businessData, cols: columns, items: items };
+        localStorage.setItem('shb_invoice_pro_data', JSON.stringify(dataToSave));
+        showToast('Settings saved locally! ✅');
+    };
+
+    // --- Handlers ---
+    const showToast = (msg) => {
+        setNotification(msg);
+        setTimeout(() => setNotification(''), 3000);
+    };
+
+    const handleLogoUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (readerEvent) => setBusinessData({ ...businessData, logo: readerEvent.target.result });
+            reader.readAsDataURL(file);
+        }
     };
 
     const updateItem = (id, field, value) => {
         setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
     };
 
-    const addItem = () => {
-        setItems([...items, { id: Date.now(), desc: 'New Item', qty: 1, price: 0 }]);
-    };
-
-    const removeItem = (id) => {
-        if (items.length > 1) setItems(items.filter(item => item.id !== id));
-    };
-
     const subtotal = items.reduce((acc, item) => acc + (item.qty * item.price), 0);
-    const taxAmount = (subtotal * invoiceInfo.taxRate) / 100;
-    const total = subtotal + taxAmount;
+    const taxTotal = (subtotal * businessData.taxRate) / 100;
+    const grandTotal = subtotal + taxTotal;
 
-    const downloadInvoice = async () => {
+    // --- Export Logic ---
+    const exportImage = async (format) => {
         const { toPng } = await import('html-to-image');
-        if (invoiceRef.current === null) return;
+        if (!invoiceRef.current) return;
         
-        toPng(invoiceRef.current, { cacheBust: true, backgroundColor: '#ffffff' })
-            .then((dataUrl) => {
-                const link = document.createElement('a');
-                link.download = `${invoiceInfo.invoiceNum}.png`;
-                link.href = dataUrl;
-                link.click();
-            });
+        showToast(`Preparing ${format.toUpperCase()}...`);
+        const dataUrl = await toPng(invoiceRef.current, { backgroundColor: '#ffffff', pixelRatio: 2 });
+        
+        if (format === 'png') {
+            const link = document.createElement('a');
+            link.download = `${businessData.invoiceNum}.png`;
+            link.href = dataUrl;
+            link.click();
+        } else {
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgProps = pdf.getImageProperties(dataUrl);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`${businessData.invoiceNum}.pdf`);
+        }
     };
 
     return (
-        <ToolboxLayout title="Professional Invoice Generator" description="Create, calculate, and download professional business invoices for free.">
-            <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 20px' }}>
-                <h1 style={{ textAlign: 'center', color: '#38bdf8', marginBottom: '10px' }}>Invoice Generator</h1>
-                <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '30px' }}>Professional billing for freelancers and small businesses.</p>
+        <ToolboxLayout title="Pro Invoice Suite" description="Generate high-end business invoices with custom branding, local storage, and PDF/PNG export.">
+            <div style={{ maxWidth: '1250px', margin: '0 auto', padding: '40px 20px' }}>
+                
+                {notification && <div style={toastStyle}>{notification}</div>}
 
-                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
                     
-                    {/* INPUT PANEL */}
-                    <div style={{ flex: 1, minWidth: '300px', background: '#1e293b', padding: '25px', borderRadius: '20px', border: '1px solid #334155' }}>
-                        <h4 style={{ color: '#38bdf8', marginTop: 0 }}>Invoice Details</h4>
-                        <input type="text" name="company" placeholder="From: Company Name" onChange={handleInfoChange} style={inputStyle} />
-                        <input type="text" name="client" placeholder="To: Client Name" onChange={handleInfoChange} style={inputStyle} />
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                            <input type="text" name="invoiceNum" placeholder="INV-001" onChange={handleInfoChange} style={inputStyle} />
-                            <input type="date" name="date" value={invoiceInfo.date} onChange={handleInfoChange} style={inputStyle} />
-                        </div>
-                        <input type="number" name="taxRate" placeholder="Tax Rate (%)" value={invoiceInfo.taxRate} onChange={handleInfoChange} style={inputStyle} />
+                    {/* --- SIDEBAR CONTROLS --- */}
+                    <div style={{ flex: 1, minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         
-                        <button onClick={addItem} style={btnAdd}>+ ADD LINE ITEM</button>
-                        <button onClick={downloadInvoice} style={btnPrimary}>💾 DOWNLOAD INVOICE (PNG)</button>
+                        <section style={cardStyle}>
+                            <h3 style={sectionHeading}>Branding & Layout</h3>
+                            <label style={labelStyle}>Company Logo</label>
+                            <input type="file" onChange={handleLogoUpload} style={inputStyle} />
+                            
+                            <label style={labelStyle}>Logo Alignment</label>
+                            <select value={businessData.logoAlign} onChange={(e)=>setBusinessData({...businessData, logoAlign: e.target.value})} style={inputStyle}>
+                                <option value="flex-start">Left</option>
+                                <option value="center">Center</option>
+                                <option value="flex-end">Right</option>
+                            </select>
+
+                            <label style={labelStyle}>Currency Symbol</label>
+                            <input type="text" value={businessData.currency} onChange={(e)=>setBusinessData({...businessData, currency: e.target.value})} style={inputStyle} />
+                        </section>
+
+                        <section style={cardStyle}>
+                            <h3 style={sectionHeading}>Custom Labels</h3>
+                            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px'}}>
+                                <div><label style={labelStyle}>Header: Item</label><input value={columns.item} onChange={(e)=>setColumns({...columns, item: e.target.value})} style={inputStyle} /></div>
+                                <div><label style={labelStyle}>Header: Qty</label><input value={columns.qty} onChange={(e)=>setColumns({...columns, qty: e.target.value})} style={inputStyle} /></div>
+                            </div>
+                        </section>
+
+                        <section style={cardStyle}>
+                            <h3 style={sectionHeading}>Actions</h3>
+                            <button onClick={saveLocally} style={btnSecondary}>💾 SAVE TEMPLATE LOCALLY</button>
+                            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginTop:'10px'}}>
+                                <button onClick={() => exportImage('pdf')} style={btnPrimary}>📄 GET PDF</button>
+                                <button onClick={() => exportImage('png')} style={btnPrimary}>🖼️ GET PNG</button>
+                            </div>
+                        </section>
                     </div>
 
-                    {/* LIVE PREVIEW (Actual Invoice) */}
-                    <div ref={invoiceRef} style={{ flex: 2, minWidth: '350px', background: '#fff', color: '#000', padding: '40px', borderRadius: '5px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px' }}>
-                            <div>
-                                <h2 style={{ margin: 0, color: '#0f172a' }}>INVOICE</h2>
-                                <p style={{ color: '#64748b' }}>#{invoiceInfo.invoiceNum}</p>
-                            </div>
-                            <div style={{ textAlign: 'right' }}>
-                                <h4 style={{ margin: 0 }}>{invoiceInfo.company}</h4>
-                                <p style={{ fontSize: '0.8rem' }}>Date: {invoiceInfo.date}</p>
-                            </div>
-                        </div>
+                    {/* --- MAIN LIVE INVOICE AREA --- */}
+                    <div style={{ flex: 2.5, minWidth: '350px' }}>
+                        <div ref={invoiceRef} style={paperStyle}>
+                            
+                            {/* Logo Area */}
+                            {businessData.logo && (
+                                <div style={{ display: 'flex', justifyContent: businessData.logoAlign, marginBottom: '20px' }}>
+                                    <img src={businessData.logo} alt="Logo" style={{ maxHeight: '80px', maxWidth: '200px' }} />
+                                </div>
+                            )}
 
-                        <div style={{ marginBottom: '30px' }}>
-                            <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>BILL TO:</p>
-                            <h4 style={{ margin: 0 }}>{invoiceInfo.client}</h4>
-                        </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px' }}>
+                                <div>
+                                    <input value={businessData.companyName} onChange={(e)=>setBusinessData({...businessData, companyName: e.target.value})} style={brandInput} />
+                                    <textarea value={businessData.companyAddress} onChange={(e)=>setBusinessData({...businessData, companyAddress: e.target.value})} style={addressInput} />
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <input value={businessData.invoiceTitle} onChange={(e)=>setBusinessData({...businessData, invoiceTitle: e.target.value})} style={{...brandInput, textAlign:'right', color:'#38bdf8', fontSize:'1.8rem'}} />
+                                    <p># <input value={businessData.invoiceNum} onChange={(e)=>setBusinessData({...businessData, invoiceNum: e.target.value})} style={ghostInput} /></p>
+                                    <p><input type="date" value={businessData.date} onChange={(e)=>setBusinessData({...businessData, date: e.target.value})} style={ghostInput} /></p>
+                                </div>
+                            </div>
 
-                        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
-                            <thead>
-                                <tr style={{ borderBottom: '2px solid #f1f5f9', textAlign: 'left', fontSize: '0.8rem' }}>
-                                    <th style={{ padding: '10px 0' }}>DESCRIPTION</th>
-                                    <th>QTY</th>
-                                    <th>PRICE</th>
-                                    <th style={{ textAlign: 'right' }}>TOTAL</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {items.map(item => (
-                                    <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                        <td style={{ padding: '15px 0' }}>
-                                            <input value={item.desc} onChange={(e) => updateItem(item.id, 'desc', e.target.value)} style={tableInput} />
-                                        </td>
-                                        <td>
-                                            <input type="number" value={item.qty} onChange={(e) => updateItem(item.id, 'qty', e.target.value)} style={{ ...tableInput, width: '40px' }} />
-                                        </td>
-                                        <td>
-                                            <input type="number" value={item.price} onChange={(e) => updateItem(item.id, 'price', e.target.value)} style={{ ...tableInput, width: '80px' }} />
-                                        </td>
-                                        <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                                            ${(item.qty * item.price).toFixed(2)}
-                                            <button onClick={() => removeItem(item.id)} style={btnDel}>&times;</button>
-                                        </td>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginBottom: '40px' }}>
+                                <div style={infoBlock}>
+                                    <span style={labelCaption}>BILL TO</span>
+                                    <input value={businessData.clientName} onChange={(e)=>setBusinessData({...businessData, clientName: e.target.value})} style={boldInput} />
+                                    <textarea value={businessData.clientAddress} onChange={(e)=>setBusinessData({...businessData, clientAddress: e.target.value})} style={addressInput} />
+                                </div>
+                            </div>
+
+                            {/* Table */}
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                                    <tr style={{ textAlign: 'left' }}>
+                                        <th style={thStyle}>{columns.item}</th>
+                                        <th style={thStyle}>{columns.qty}</th>
+                                        <th style={thStyle}>{columns.price}</th>
+                                        <th style={{ ...thStyle, textAlign: 'right' }}>{columns.total}</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {items.map(item => (
+                                        <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                            <td style={tdStyle}><input value={item.desc} onChange={(e)=>updateItem(item.id, 'desc', e.target.value)} style={itemInput} /></td>
+                                            <td style={tdStyle}><input type="number" value={item.qty} onChange={(e)=>updateItem(item.id, 'qty', parseFloat(e.target.value))} style={itemInput} /></td>
+                                            <td style={tdStyle}><input type="number" value={item.price} onChange={(e)=>updateItem(item.id, 'price', parseFloat(e.target.value))} style={itemInput} /></td>
+                                            <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 'bold' }}>{businessData.currency}{(item.qty * item.price).toFixed(2)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            
+                            <button onClick={()=>setItems([...items, {id: Date.now(), desc:'', qty:1, price:0}])} style={{marginTop:'10px', background:'none', border:'1px dashed #cbd5e1', width:'100%', padding:'10px', cursor:'pointer', color:'#64748b'}}>+ Add New Line</button>
 
-                        <div style={{ marginLeft: 'auto', width: '200px' }}>
-                            <div style={summaryRow}><span>Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
-                            <div style={summaryRow}><span>Tax ({invoiceInfo.taxRate}%):</span><span>${taxAmount.toFixed(2)}</span></div>
-                            <div style={{ ...summaryRow, borderTop: '2px solid #0f172a', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '10px', paddingTop: '10px' }}>
-                                <span>TOTAL:</span><span>${total.toFixed(2)}</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px' }}>
+                                <div style={{width:'50%'}}>
+                                    <span style={labelCaption}>NOTES & TERMS</span>
+                                    <textarea value={businessData.notes} onChange={(e)=>setBusinessData({...businessData, notes: e.target.value})} style={notesInput} />
+                                </div>
+                                <div style={{ width: '220px' }}>
+                                    <div style={sumRow}><span>Subtotal</span><span>{businessData.currency}{subtotal.toFixed(2)}</span></div>
+                                    <div style={sumRow}><span>Tax (<input type="number" value={businessData.taxRate} onChange={(e)=>setBusinessData({...businessData, taxRate: e.target.value})} style={{width:'35px', background:'none', border:'none', fontWeight:'bold'}} />%)</span><span>{businessData.currency}{taxTotal.toFixed(2)}</span></div>
+                                    <div style={grandRow}><span>TOTAL</span><span>{businessData.currency}{grandTotal.toFixed(2)}</span></div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* --- PROFESSIONAL SEO SECTION --- */}
-                <div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8' }}>
-                    <h2 style={{ color: '#38bdf8' }}>Professional Online Invoice Generator for Small Businesses</h2>
-                    <p>
-                        The SHB Invoice Generator is a high-utility business tool designed to simplify the billing process for freelancers, 
-                        consultants, and small business owners. Creating a professional invoice is essential for getting paid on time 
-                        and maintaining a professional image with your clients.
-                    </p>
+                {/* --- SEO SECTION --- */}
+                <div style={{ marginTop: '80px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8' }}>
+                    <h2 style={{ color: '#38bdf8' }}>Professional Cloud-Free Billing & Invoice Management</h2>
+                    <p>The SHB Invoice Suite is a best-in-class utility designed for modern entrepreneurs, freelancers, and small business owners. Managing accounts receivable requires tools that are not only professional in output but also respect the privacy of your financial data.</p>
+                    
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Custom Branding & Design Control</h3>
+                    <p>Standard templates often lack the flexibility needed for real branding. Our generator provides full control over your <strong>Company Logo</strong>, including precision alignment and sizing. You can also customize every <strong>Column Header</strong>, allowing the tool to adapt to any industry—from time-based consulting to product-based shipping.</p>
 
-                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Key Features of our Billing Suite</h3>
-                    <ul>
-                        <li><strong>Dynamic Line Items:</strong> Add as many services or products as you need. Our table expands automatically to fit your data.</li>
-                        <li><strong>Automatic Math Engine:</strong> Stop using a calculator. Our system automatically updates subtotals, tax amounts, and grand totals in real-time as you adjust quantities and prices.</li>
-                        <li><strong>Custom Tax Support:</strong> Whether you need to apply GST, VAT, or a standard sales tax, simply enter your local percentage and we handle the rest.</li>
-                        <li><strong>High-Resolution Export:</strong> Download your finished invoice as a high-quality image file that is ready for email attachment or physical printing.</li>
-                    </ul>
-
-                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Why Privacy is Our Business Model</h3>
-                    <p>
-                        Financial data is highly sensitive. Many "cloud" invoice generators store your client names, earnings, and company details 
-                        on their servers. At SHB ToolBox, we prioritize your security. Our tool uses <strong>Client-Side logic</strong>. 
-                        Your invoice details are processed entirely in your browser's memory. We do not store your invoices in our 
-                        database or Supabase servers. When you close the tab, your data is gone—making this one of the 
-                        most secure ways to generate a quick bill.
-                    </p>
+                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Smart Persistence with Local Storage</h3>
+                    <p>Unlike many online tools that force you to re-type your business name every time, SHB ToolBox uses <strong>Persistent Local Storage</strong>. This saves your business address, tax rates, and branding settings directly in your browser. Your data remains on your machine—never uploaded to the cloud—ensuring you can generate recurring invoices in seconds without privacy risks.</p>
                 </div>
             </div>
         </ToolboxLayout>
     );
 }
 
-// --- STYLES ---
-const inputStyle = { width: '100%', background: '#0f172a', border: '1px solid #334155', padding: '12px', borderRadius: '10px', color: '#fff', marginBottom: '10px' };
-const btnAdd = { width: '100%', background: 'transparent', color: '#38bdf8', border: '1px solid #38bdf8', padding: '10px', borderRadius: '10px', cursor: 'pointer', marginBottom: '10px', fontWeight: 'bold' };
-const btnPrimary = { width: '100%', background: '#38bdf8', color: '#0f172a', border: 'none', padding: '15px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' };
-const tableInput = { border: 'none', background: 'transparent', fontSize: '0.9rem', width: '100%', outline: 'none' };
-const btnDel = { background: 'none', border: 'none', color: '#f87171', marginLeft: '10px', cursor: 'pointer', fontSize: '1.2rem' };
-const summaryRow = { display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.9rem' };
+// --- STYLING ---
+const cardStyle = { background: '#1e293b', padding: '20px', borderRadius: '15px', border: '1px solid #334155' };
+const sectionHeading = { color: '#38bdf8', fontSize: '1rem', marginTop: 0, marginBottom: '15px' };
+const labelStyle = { color: '#64748b', fontSize: '0.75rem', display: 'block', marginBottom: '5px' };
+const inputStyle = { width: '100%', background: '#0f172a', border: '1px solid #334155', padding: '10px', borderRadius: '8px', color: '#fff', marginBottom: '10px' };
+const paperStyle = { background: '#fff', color: '#000', padding: '50px', borderRadius: '4px', boxShadow: '0 10px 40px rgba(0,0,0,0.4)', minHeight: '800px' };
+const brandInput = { background: 'none', border: 'none', fontSize: '1.4rem', fontWeight: 'bold', width: '100%', outline: 'none' };
+const addressInput = { background: 'none', border: 'none', width: '100%', fontSize: '0.85rem', color: '#475569', resize: 'none', outline: 'none' };
+const ghostInput = { background: 'none', border: 'none', width: '120px', fontSize: '0.9rem', textAlign: 'right', outline: 'none' };
+const labelCaption = { fontSize: '0.7rem', color: '#94a3b8', fontWeight: 'bold', display: 'block', marginBottom: '5px' };
+const boldInput = { background: 'none', border: 'none', fontSize: '1.1rem', fontWeight: 'bold', width: '100%', outline: 'none' };
+const thStyle = { padding: '12px 10px', fontSize: '0.8rem', color: '#475569' };
+const tdStyle = { padding: '15px 10px' };
+const itemInput = { border: 'none', background: 'none', width: '100%', outline: 'none', fontSize: '0.9rem' };
+const notesInput = { background: '#f8fafc', border: 'none', width: '100%', height: '100px', padding: '10px', fontSize: '0.8rem', outline: 'none', resize: 'none' };
+const sumRow = { display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: '0.9rem' };
+const grandRow = { display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: '2px solid #000', fontWeight: 'bold', marginTop: '10px', fontSize: '1.1rem' };
+const btnPrimary = { background: '#38bdf8', color: '#0f172a', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.8rem' };
+const btnSecondary = { background: '#34d399', color: '#0f172a', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', width: '100%' };
+const infoBlock = { borderLeft: '4px solid #f1f5f9', paddingLeft: '15px' };
+const toastStyle = { position: 'fixed', top: '20px', right: '20px', background: '#34d399', color: '#0f172a', padding: '15px 25px', borderRadius: '10px', fontWeight: 'bold', zIndex: 9999, boxShadow: '0 5px 20px rgba(0,0,0,0.2)' };
