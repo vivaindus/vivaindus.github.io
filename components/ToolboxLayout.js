@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Head from 'next/head';
-import Link from 'next/link'; // IMPORT LINK COMPONENT
+import Link from 'next/link';
 
-// --- NAV LINKS ---
 const navLinks = [
     { name: 'CPS TEST', href: '/cpstest' },
     { name: 'BMI CALC', href: '/bmicalculator' },
@@ -22,10 +21,8 @@ export default function ToolboxLayout({ children, title, description }) {
             <Head>
                 <title>{title} | SHB ToolBox</title>
                 <meta name="description" content={description} />
-                
             </Head>
 
-            {/* SHARED NAVIGATION */}
             <nav style={{ background: '#1e293b', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #334155', overflowX: 'auto', position: 'sticky', top: 0, zIndex: 100 }}>
                 <span style={{ fontWeight: 'bold', fontSize: '1.2rem', color: '#38bdf8', marginRight: '20px', whiteSpace: 'nowrap' }}>SHB ToolBox</span>
                 <div style={{ display: 'flex', gap: '15px' }}>
@@ -41,7 +38,6 @@ export default function ToolboxLayout({ children, title, description }) {
                 {children}
             </main>
 
-            {/* SHARED FOOTER */}
             <footer style={{ textAlign: 'center', padding: '40px', color: '#475569', fontSize: '0.8rem', borderTop: '1px solid #1e293b', marginTop: '40px' }}>
                 <div style={{ marginBottom: '15px' }}>
                     {navLinks.map((link) => (
@@ -57,12 +53,4 @@ export default function ToolboxLayout({ children, title, description }) {
             </footer>
         </div>
     );
-    useEffect(() => {
-    // NATIVE GHOST INJECTION: Prevents AdSense console warnings
-    const script = document.createElement('script');
-    script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8152928186282906";
-    script.async = true;
-    script.crossOrigin = "anonymous";
-    document.head.appendChild(script);
-}, []);
 }

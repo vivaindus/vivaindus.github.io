@@ -4,13 +4,14 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        {/* NATIVE INJECTION: Stops Next.js from adding attributes to the script */}
         <script 
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 var script = document.createElement('script');
-                
+                script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8152928186282906";
+                script.async = true;
+                script.crossOrigin = "anonymous";
                 document.head.appendChild(script);
               })();
             `
