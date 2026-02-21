@@ -12,6 +12,7 @@ export default function Document() {
                 script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8152928186282906";
                 script.async = true;
                 script.crossOrigin = "anonymous";
+                script.setAttribute('data-ad-client', 'ca-pub-8152928186282906');
                 document.head.appendChild(script);
               })();
             `

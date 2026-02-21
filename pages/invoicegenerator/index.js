@@ -36,7 +36,6 @@ export default function ProfessionalInvoiceSuite() {
         showToast('Business Template Saved Locally! ✅');
     };
 
-    // --- ACCURATE AMOUNT IN WORDS (Handles Fils) ---
     const toWords = (total) => {
         const convert = (n) => {
             const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
@@ -70,12 +69,12 @@ export default function ProfessionalInvoiceSuite() {
         }
     };
 
-    // --- SMART MULTI-PAGE EXPORT ENGINE ---
+    // --- ENHANCED PDF SLICING ENGINE (Fixes Split Clipping) ---
     const exportFile = async (type) => {
         const { toCanvas } = await import('html-to-image');
         const { jsPDF } = await import('jspdf');
         if (!invoiceRef.current) return;
-        showToast('Processing HD Layout...');
+        showToast('Analyzing multi-page layout...');
 
         const canvas = await toCanvas(invoiceRef.current, {
             pixelRatio: 3, 
@@ -84,67 +83,81 @@ export default function ProfessionalInvoiceSuite() {
         });
 
         const imgData = canvas.toDataURL('image/png', 1.0);
+        const pdf = new jsPDF('p', 'mm', pageSize.toLowerCase());
+        const pW = pdf.internal.pageSize.getWidth();
+        const pH = pdf.internal.pageSize.getHeight();
+        const imgH = (canvas.height * pW) / canvas.width;
+        
+        let hLeft = imgH;
+        let pos = 0;
+        
+        // --- Split Logic Settings ---
+        const topMarginBuffer = 20; // Blank space at top of Page 2+
+        const bottomMarginBuffer = 15; // Blank space at bottom of Page 1
+
+        // Render Page 1
+        pdf.addImage(imgData, 'PNG', 0, pos, pW, imgH);
+        hLeft -= (pH - bottomMarginBuffer); // Stop early to leave bottom gap
+
+        // Splicing for subsequent pages
+        while (hLeft > 0) {
+            pdf.addPage();
+            // Offset the image so Page 2 starts further down
+            pos = hLeft - imgH + topMarginBuffer;
+            pdf.addImage(imgData, 'PNG', 0, pos, pW, imgH);
+            hLeft -= (pH - topMarginBuffer - bottomMarginBuffer);
+        }
+        
         if (type === 'png') {
             const link = document.createElement('a'); link.download = `Invoice.png`; link.href = imgData; link.click();
         } else {
-            const pdf = new jsPDF('p', 'mm', pageSize.toLowerCase());
-            const pW = pdf.internal.pageSize.getWidth();
-            const pH = pdf.internal.pageSize.getHeight();
-            const imgH = (canvas.height * pW) / canvas.width;
-            
-            let hLeft = imgH;
-            let pos = 0;
-            const topGap = 20; 
-
-            pdf.addImage(imgData, 'PNG', 0, pos, pW, imgH);
-            hLeft -= pH;
-
-            while (hLeft >= 0) {
-                pdf.addPage();
-                pos = hLeft - imgH + topGap;
-                pdf.addImage(imgData, 'PNG', 0, pos, pW, imgH);
-                hLeft -= (pH - topGap);
-            }
             pdf.save(`Invoice-${meta.invoiceNum}.pdf`);
         }
-        showToast('Document Ready! ✅');
+        showToast('High-Resolution Export Ready! ✅');
     };
 
     return (
-        <ToolboxLayout title="Universal Invoice Pro" description="Universal Multi-page UAE Tax Invoice Suite.">
+        <ToolboxLayout title="Professional Invoice Suite" description="UAE & Global Tax Invoicing.">
             <div style={{ maxWidth: '1550px', margin: '0 auto', padding: '20px' }}>
                 {notification && <div style={toastStyle}>{notification}</div>}
 
                 <div style={{ display: 'flex', gap: '25px', flexWrap: 'wrap' }}>
                     
-                    {/* SIDEBAR */}
                     <aside style={sidebarS}>
                         <div style={sidebarCard}>
                             <h3 style={cardTitle}>Branding & Theme</h3>
                             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'15px'}}>
                                 <div><label style={lCap}>Theme Color</label><input type="color" value={meta.titleColor} onChange={(e)=>setMeta({...meta, titleColor:e.target.value})} style={clrInp} /></div>
-                                <div><label style={lCap}>Text Color</label><input type="color" value={meta.primaryColor} onChange={(e)=>setMeta({...meta, primaryColor:e.target.value})} style={clrInp} /></div>
+                                <div><label style={lCap}>Body Color</label><input type="color" value={meta.primaryColor} onChange={(e)=>setMeta({...meta, primaryColor:e.target.value})} style={clrInp} /></div>
                             </div>
-                            <label style={lCap}>Decimals</label>
+                            <label style={lCap}>Precision</label>
                             <select value={meta.decimals} onChange={(e)=>setMeta({...meta, decimals: parseInt(e.target.value)})} style={selS}>
-                                <option value={2}>2 Decimals (AED/USD)</option>
-                                <option value={3}>3 Decimals (OMR/KWD)</option>
+                                <option value={2}>2 Decimals (AED)</option>
+                                <option value={3}>3 Decimals (OMR)</option>
                             </select>
                             <label style={lCap}>Logo Position</label>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px' }}><button onClick={() => setMeta({ ...meta, logoAlign: 'flex-start' })} style={btnMin}>Left</button><button onClick={() => setMeta({ ...meta, logoAlign: 'center' })} style={btnMin}>Center</button><button onClick={() => setMeta({ ...meta, logoAlign: 'flex-end' })} style={btnMin}>Right</button></div>
-                            <input type="file" onChange={handleLogo} style={{...inpS, marginTop:'10px'}} />
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px', marginBottom:'10px' }}>
+                                <button onClick={() => setMeta({ ...meta, logoAlign: 'flex-start' })} style={btnMin}>Left</button>
+                                <button onClick={() => setMeta({ ...meta, logoAlign: 'center' })} style={btnMin}>Center</button>
+                                <button onClick={() => setMeta({ ...meta, logoAlign: 'flex-end' })} style={btnMin}>Right</button>
+                            </div>
+                            <input type="file" onChange={handleLogo} style={inpStyle} />
                         </div>
 
                         <div style={sidebarCard}>
-                            <button onClick={saveSettings} style={btnSave}>💾 SAVE SETTINGS</button>
+                            <button onClick={saveSettings} style={btnSave}>💾 SAVE AS DEFAULT</button>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}><button onClick={() => exportFile('pdf')} style={btnExport}>GET PDF</button><button onClick={() => exportFile('png')} style={btnExport}>GET PNG</button></div>
-                            <button onClick={() => { if(window.confirm("Hard reset?")) { localStorage.clear(); window.location.reload(); } }} style={btnReset}>HARD RESET</button>
+                            <button onClick={() => { if(window.confirm("Confirm reset?")) { localStorage.clear(); window.location.reload(); } }} style={btnReset}>HARD RESET</button>
                         </div>
                     </aside>
 
-                    {/* PAPER WRAPPER */}
                     <main style={paperWrapper}>
-                        <div ref={invoiceRef} id="invoice-paper" style={{ ...paperStyle, width: pageSize === 'A4' ? '210mm' : '215.9mm', color: meta.primaryColor }}>
+                        <div ref={invoiceRef} id="invoice-paper" style={{ 
+                            ...paperStyle, 
+                            width: pageSize === 'A4' ? '210mm' : '215.9mm',
+                            color: meta.primaryColor,
+                            backgroundColor: '#ffffff'
+                        }}>
                             
                             <div style={{ display: 'flex', justifyContent: meta.logoAlign, marginBottom: '20px' }}>
                                 {meta.logo ? <img src={meta.logo} style={{ maxHeight: '85px', maxWidth: '250px', objectFit:'contain' }} /> : <div style={{height:'85px'}}></div>}
@@ -153,15 +166,15 @@ export default function ProfessionalInvoiceSuite() {
                             <div style={headerGrid}>
                                 <div style={{flex: 2}}>
                                     <input value={meta.invoiceTitle} onChange={(e)=>setMeta({...meta, invoiceTitle: e.target.value})} style={{...titleI, color: meta.titleColor}} />
-                                    <input value={meta.senderName} onChange={(e)=>setMeta({...meta, senderName: e.target.value})} style={{...compT, color: meta.primaryColor}} />
-                                    <textarea value={meta.senderAddress} onChange={(e)=>setMeta({...meta, senderAddress: e.target.value})} style={{...addrI, color: meta.primaryColor}} />
+                                    <input value={meta.senderName} onChange={(e)=>setMeta({...meta, senderName: e.target.value})} style={compT} />
+                                    <textarea value={meta.senderAddress} onChange={(e)=>setMeta({...meta, senderAddress: e.target.value})} style={addrI} />
                                     <div style={trnL}>Supplier TRN: <input value={meta.senderTRN} onChange={(e)=>setMeta({...meta, senderTRN: e.target.value})} style={trnInp} /></div>
                                 </div>
                                 <div style={{ flex: 1, textAlign: 'right' }}>
-                                    <div style={mRow}><span>Invoice No:</span><input value={meta.invoiceNum} onChange={(e)=>setMeta({...meta, invoiceNum: e.target.value})} style={mInp} /></div>
+                                    <div style={mRow}><span>No:</span><input value={meta.invoiceNum} onChange={(e)=>setMeta({...meta, invoiceNum: e.target.value})} style={mInp} /></div>
                                     <div style={mRow}><span>Date:</span><input type="date" value={meta.invoiceDate} onChange={(e)=>setMeta({...meta, invoiceDate: e.target.value})} style={mInp} /></div>
-                                    <div style={mRow}><span>Supply Date:</span><input type="date" value={meta.supplyDate} onChange={(e)=>setMeta({...meta, supplyDate: e.target.value})} style={mInp} /></div>
-                                    <div style={mRow}><span>Currency:</span><input value={meta.currency} onChange={(e)=>setMeta({...meta, currency: e.target.value})} style={{...mInp, fontWeight:'bold', color: meta.titleColor}} /></div>
+                                    <div style={mRow}><span>Supply:</span><input type="date" value={meta.supplyDate} onChange={(e)=>setMeta({...meta, supplyDate: e.target.value})} style={mInp} /></div>
+                                    <div style={mRow}><span>Curr:</span><input value={meta.currency} onChange={(e)=>setMeta({...meta, currency: e.target.value})} style={{...mInp, fontWeight:'bold', color: meta.titleColor}} /></div>
                                 </div>
                             </div>
 
@@ -198,9 +211,9 @@ export default function ProfessionalInvoiceSuite() {
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '30px', pageBreakInside: 'avoid' }}>
                                 <div style={{ width: '60%' }}>
-                                    <span style={tagL}>AMOUNT IN WORDS</span>
+                                    <span style={tagLabel}>AMOUNT IN WORDS</span>
                                     <div style={{...wordBox, color: meta.titleColor}}>{toWords(grandTotal)}</div>
-                                    <span style={{...tagL, marginTop:'20px'}}>NOTES & DECLARATIONS</span>
+                                    <span style={{...tagLabel, marginTop:'20px'}}>NOTES & DECLARATIONS</span>
                                     <textarea value={meta.notes} onChange={(e)=>setMeta({...meta, notes: e.target.value})} style={notesArea} />
                                 </div>
                                 <div style={{ width: '240px' }}>
@@ -216,7 +229,7 @@ export default function ProfessionalInvoiceSuite() {
                                 <input value={meta.footerMsg} onChange={(e)=>setMeta({...meta, footerMsg: e.target.value})} style={footInp} />
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
                                     <input value={meta.footerUrl} onChange={(e)=>setMeta({...meta, footerUrl: e.target.value})} style={urlI} />
-                                    <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>Page 1 of 1</span>
+                                    <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>Professional Document generated by shbstores.com</span>
                                 </div>
                             </div>
                         </div>
@@ -224,13 +237,13 @@ export default function ProfessionalInvoiceSuite() {
                 </div>
 
                 <div style={seoCont}>
-                    <h2 style={{color: '#38bdf8'}}>Enterprise Tax Invoice Management & Global Compliance</h2>
-                    <p>SHB Invoice Generator is engineered for international tax compliance across jurisdictions like the UAE (FTA), Saudi Arabia (ZATCA), and the broader GCC. Featuring granular decimal control and multi-page PDF exporting, we provide a professional alternative to basic templates.</p>
+                    <h2 style={{color: '#38bdf8'}}>Enterprise Tax Invoice Management</h2>
+                    <p>Compliance-first Tax Invoice Suite optimized for UAE (FTA) and GCC regional trade standards.</p>
                 </div>
             </div>
             <style jsx>{`
                 @media print { .no-print { display: none !important; } }
-                #invoice-paper { background: white !important; font-family: 'Segoe UI', sans-serif; }
+                #invoice-paper { background: white !important; font-family: 'Segoe UI', Arial, sans-serif; }
                 #invoice-paper input, #invoice-paper textarea { color: inherit !important; background: transparent !important; border: none; outline: none; transition: 0.1s; width: 100%; }
                 #invoice-paper input:hover { background: rgba(0,0,0,0.02) !important; border-radius: 4px; }
             `}</style>
@@ -263,7 +276,7 @@ const thR = { borderTop: '2px solid #000' };
 const tc = { padding: '10px 5px', fontSize: '0.75rem', textAlign: 'left', borderBottom: '1px solid #f1f5f9' };
 const itemR = { verticalAlign: 'top' };
 const rawI = { fontSize: '0.75rem' };
-const addB = { width: '100%', padding: '10px', background: '#f8fafc', border: '1px dashed #ccc', color: '#94a3b8', cursor: 'pointer', marginTop: '10px' };
+const addB = { width: '100%', padding: '10px', background: '#f8fafc', border: '1px dashed #ccc', color: '#94a3b8', cursor: 'pointer', marginTop: '10px', borderRadius:'5px' };
 const delBtn = { border: 'none', background: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1.2rem' };
 const sumR = { display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: '0.85rem' };
 const grandRow = { display: 'flex', justifyContent: 'space-between', padding: '10px', borderTop: '2px solid #000', fontWeight: 'bold', fontSize: '1.2rem', marginTop: '5px', background:'#f8fafc' };
