@@ -22,8 +22,7 @@ export default function ToolboxLayout({ children, title, description }) {
             <Head>
                 <title>{title} | SHB ToolBox</title>
                 <meta name="description" content={description} />
-                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8152928186282906"
-     crossorigin="anonymous"></script>
+                
             </Head>
 
             {/* SHARED NAVIGATION */}
@@ -58,4 +57,12 @@ export default function ToolboxLayout({ children, title, description }) {
             </footer>
         </div>
     );
+    useEffect(() => {
+    // NATIVE GHOST INJECTION: Prevents AdSense console warnings
+    const script = document.createElement('script');
+    script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8152928186282906";
+    script.async = true;
+    script.crossOrigin = "anonymous";
+    document.head.appendChild(script);
+}, []);
 }
