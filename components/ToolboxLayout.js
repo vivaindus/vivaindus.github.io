@@ -3,6 +3,17 @@ import Head from 'next/head';
 import Link from 'next/link';
 
 const navLinks = [
+    { name: 'INVOICE GEN', href: '/invoicegenerator' },
+    { name: 'IMAGE COMPRESS', href: '/imagecompressor' },
+    { name: 'IMAGE RESIZE', href: '/imageresizer' },
+    { name: 'CASE STUDIO', href: '/caseconverter' },
+    { name: 'QR GEN', href: '/qrcode' },
+    { name: 'PDF TO IMAGE', href: '/pdftoimage' },
+    { name: 'IMAGE TO PDF', href: '/imagetopdf' },
+    { name: 'FAVICON GEN', href: '/favicongen' },
+    { name: 'EMI CALC', href: '/emicalculator' },
+    { name: 'SIP CALC', href: '/sipcalculator' },
+    { name: 'YT THUMB', href: '/thumbnaildownloader' },
     { name: 'CPS TEST', href: '/cpstest' },
     { name: 'BMI CALC', href: '/bmicalculator' },
     { name: 'AGE CALC', href: '/agecalculator' },
@@ -10,7 +21,6 @@ const navLinks = [
     { name: 'UNIT CONV', href: '/unitconverter' },
     { name: 'PASSWORD', href: '/passwordgen' },
     { name: 'WORD COUNT', href: '/wordcounter' },
-    { name: 'QR GEN', href: '/qrcode' },
     { name: 'PERCENTAGE', href: '/percentagecalculator' },
     { name: 'TASK LIST', href: '/tasklist' },
 ];

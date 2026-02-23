@@ -2,16 +2,26 @@ import React from 'react';
 import ToolboxLayout from '../components/ToolboxLayout';
 
 const tools = [
-    { title: 'Bulk QR Studio', desc: 'Generate multiple QR codes at once with ZIP export.', link: '/qrcode', icon: '📱' },
-    { title: 'CPS Test', desc: 'Measure your mouse clicking speed in seconds.', link: '/cpstest', icon: '🖱️' },
-    { title: 'BMI Calculator', desc: 'Calculate Body Mass Index for health tracking.', link: '/bmicalculator', icon: '⚖️' },
-    { title: 'Age Calculator', desc: 'Find your exact age in years, months, and days.', link: '/agecalculator', icon: '📅' },
-    { title: 'Reaction Test', desc: 'Test your reflexes and visual response time.', link: '/reactiontest', icon: '⚡' },
-    { title: 'Unit Converter', desc: 'Convert length, weight, and volume instantly.', link: '/unitconverter', icon: '🔄' },
-    { title: 'Password Generator', desc: 'Create secure, encrypted passwords for your accounts.', link: '/passwordgen', icon: '🔐' },
-    { title: 'Word Counter', desc: 'Count characters and words for writing tasks.', link: '/wordcounter', icon: '📝' },
-    { title: 'Percentage Calc', desc: 'Fast calculations for discounts and markups.', link: '/percentagecalculator', icon: '📊' },
-    { title: 'Task List Pro', desc: 'Organize your daily chores with a simple database list.', link: '/tasklist', icon: '✅' },
+    { title: 'Tax Invoice Pro', desc: 'Compliant UAE VAT invoice generator.', link: '/invoicegenerator', icon: '📄' },
+    { title: 'Image Compressor', desc: 'Reduce file size without quality loss.', link: '/imagecompressor', icon: '🗜️' },
+    { title: 'Image Resizer', desc: 'Social media presets and custom sizing.', link: '/imageresizer', icon: '🖼️' },
+    { title: 'Case Converter', desc: 'Advanced text cleaning and case suite.', link: '/caseconverter', icon: '🔡' },
+    { title: 'Bulk QR Studio', desc: 'Generate multiple QR codes as ZIP.', link: '/qrcode', icon: '📱' },
+    { title: 'PDF to Image', desc: 'HD extraction of PDF pages to PNG/JPG.', link: '/pdftoimage', icon: '📑' },
+    { title: 'Image to PDF', desc: 'Combine multiple images into one PDF.', link: '/imagetopdf', icon: '📦' },
+    { title: 'Favicon Gen', desc: 'Create full website icon sets in seconds.', link: '/favicongen', icon: '⭐' },
+    { title: 'EMI Calculator', desc: 'Home and personal loan payment planner.', link: '/emicalculator', icon: '💰' },
+    { title: 'SIP Calculator', desc: 'Investment and wealth gain visualizer.', link: '/sipcalculator', icon: '📈' },
+    { title: 'Thumbnail Grab', desc: 'Extract HD images from any YT link.', link: '/thumbnaildownloader', icon: '🎥' },
+    { title: 'CPS Test', desc: 'Clicks per second speed counter.', link: '/cpstest', icon: '🖱️' },
+    { title: 'BMI Calculator', desc: 'Health and body mass index tracker.', link: '/bmicalculator', icon: '⚖️' },
+    { title: 'Age Calculator', desc: 'Precise chronological age counting.', link: '/agecalculator', icon: '📅' },
+    { title: 'Reaction Test', desc: 'Measure neurological reflex speed.', link: '/reactiontest', icon: '⚡' },
+    { title: 'Unit Converter', desc: 'Metric and imperial conversion suite.', link: '/unitconverter', icon: '🔄' },
+    { title: 'Password Gen', desc: 'Secure, encrypted string generation.', link: '/passwordgen', icon: '🔐' },
+    { title: 'Word Counter', desc: 'Real-time text analysis and reading time.', link: '/wordcounter', icon: '📝' },
+    { title: 'Percentage Suite', desc: 'Fast calculations for business discounts.', link: '/percentagecalculator', icon: '📊' },
+    { title: 'Task Manager', desc: 'Organize chores with local storage save.', link: '/tasklist', icon: '✅' },
 ];
 
 export default function Home() {

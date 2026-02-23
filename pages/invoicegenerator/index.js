@@ -14,17 +14,17 @@ export default function ProfessionalInvoiceSuite() {
         currency: 'AED', decimals: 2, 
         senderName: 'Your Business Name', senderTRN: '100XXXXXXXXXXXX',
         senderAddress: 'Office 101, Business Bay, Dubai, UAE',
-        clientName: 'Client Company Name', clientTRN: '100XXXXXXXXXXXX',
+        clientName: 'Recipient Company Name', clientTRN: '100XXXXXXXXXXXX',
         clientAddress: 'Recipient Location, City, Country',
         notes: 'Reverse Charge applies if applicable. Thank you for your business.',
         footerMsg: 'Authorized Signatory', 
         footerUrl: 'https://www.shbstores.com/invoicegenerator' 
     });
 
-    const [items, setItems] = useState([{ id: 1, code: 'S01', desc: 'Consultancy Services', qty: 1, price: 0, vatRate: 5 }]);
+    const [items, setItems] = useState([{ id: 1, code: 'S01', desc: 'Consulting Service', qty: 1, price: 0, vatRate: 5 }]);
 
     useEffect(() => {
-        const saved = localStorage.getItem('shb_invoice_pro_v11');
+        const saved = localStorage.getItem('shb_invoice_final_v11');
         if (saved) {
             const parsed = JSON.parse(saved);
             setMeta(parsed.meta); setItems(parsed.items);
@@ -32,25 +32,29 @@ export default function ProfessionalInvoiceSuite() {
     }, []);
 
     const saveSettings = () => {
-        localStorage.setItem('shb_invoice_pro_v11', JSON.stringify({ meta, items }));
-        showToast('Business Template Saved Locally! ✅');
+        localStorage.setItem('shb_invoice_final_v11', JSON.stringify({ meta, items }));
+        showToast('Template Saved Locally! ✅');
     };
 
+    // --- CORRECTED AMOUNT IN WORDS (Natural English) ---
     const toWords = (total) => {
-        const convert = (n) => {
-            const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-            const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-            const num = parseInt(n);
+        if (total === 0) return 'Zero ' + meta.currency + ' Only';
+        const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+        const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+        
+        function convert_number(num) {
             if (num < 20) return a[num];
             if (num < 100) return b[Math.floor(num / 10)] + (num % 10 !== 0 ? ' ' + a[num % 10] : '');
-            if (num < 1000) return a[Math.floor(num / 100)] + ' Hundred' + (num % 100 !== 0 ? ' and ' + convert(num % 100) : '');
+            if (num < 1000) return a[Math.floor(num / 100)] + ' Hundred' + (num % 100 !== 0 ? ' and ' + convert_number(num % 100) : '');
+            if (num < 1000000) return convert_number(Math.floor(num / 1000)) + ' Thousand' + (num % 1000 !== 0 ? ' ' + convert_number(num % 1000) : '');
             return '';
-        };
+        }
+
         const amount = parseFloat(total).toFixed(2);
         const [d, f] = amount.split('.');
-        let str = parseInt(d) > 0 ? convert(d) + ' ' + meta.currency : '';
-        if (parseInt(f) > 0) str += (str ? ' and ' : '') + convert(f) + ' Fils';
-        return str ? str + ' Only' : 'Zero ' + meta.currency;
+        let str = convert_number(parseInt(d)) + ' ' + meta.currency;
+        if (parseInt(f) > 0) str += ' and ' + convert_number(parseInt(f)) + ' Fils';
+        return str + ' Only';
     };
 
     const fmt = (num) => parseFloat(num || 0).toFixed(meta.decimals);
@@ -69,15 +73,14 @@ export default function ProfessionalInvoiceSuite() {
         }
     };
 
-    // --- ENHANCED PDF SLICING ENGINE (Fixes Split Clipping) ---
     const exportFile = async (type) => {
         const { toCanvas } = await import('html-to-image');
         const { jsPDF } = await import('jspdf');
         if (!invoiceRef.current) return;
-        showToast('Analyzing multi-page layout...');
+        showToast('Preparing Ultra-HD Document...');
 
         const canvas = await toCanvas(invoiceRef.current, {
-            pixelRatio: 3, 
+            pixelRatio: 4, 
             backgroundColor: '#ffffff',
             canvasWidth: 800 
         });
@@ -90,22 +93,16 @@ export default function ProfessionalInvoiceSuite() {
         
         let hLeft = imgH;
         let pos = 0;
-        
-        // --- Split Logic Settings ---
-        const topMarginBuffer = 20; // Blank space at top of Page 2+
-        const bottomMarginBuffer = 15; // Blank space at bottom of Page 1
+        const topGap = 25; // Space for second page top margin
 
-        // Render Page 1
         pdf.addImage(imgData, 'PNG', 0, pos, pW, imgH);
-        hLeft -= (pH - bottomMarginBuffer); // Stop early to leave bottom gap
+        hLeft -= pH;
 
-        // Splicing for subsequent pages
         while (hLeft > 0) {
             pdf.addPage();
-            // Offset the image so Page 2 starts further down
-            pos = hLeft - imgH + topMarginBuffer;
+            pos = hLeft - imgH + topGap;
             pdf.addImage(imgData, 'PNG', 0, pos, pW, imgH);
-            hLeft -= (pH - topMarginBuffer - bottomMarginBuffer);
+            hLeft -= (pH - topGap);
         }
         
         if (type === 'png') {
@@ -113,56 +110,46 @@ export default function ProfessionalInvoiceSuite() {
         } else {
             pdf.save(`Invoice-${meta.invoiceNum}.pdf`);
         }
-        showToast('High-Resolution Export Ready! ✅');
     };
 
     return (
-        <ToolboxLayout title="Professional Invoice Suite" description="UAE & Global Tax Invoicing.">
-            <div style={{ maxWidth: '1550px', margin: '0 auto', padding: '20px' }}>
+        <ToolboxLayout title="Tax Invoice Suite" description="Complete professional tax invoice generator.">
+            <div style={{ maxWidth: '1500px', margin: '0 auto', padding: '20px' }}>
                 {notification && <div style={toastStyle}>{notification}</div>}
 
                 <div style={{ display: 'flex', gap: '25px', flexWrap: 'wrap' }}>
-                    
                     <aside style={sidebarS}>
                         <div style={sidebarCard}>
-                            <h3 style={cardTitle}>Branding & Theme</h3>
+                            <h3 style={cardTitle}>Professional Theme</h3>
                             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'15px'}}>
-                                <div><label style={lCap}>Theme Color</label><input type="color" value={meta.titleColor} onChange={(e)=>setMeta({...meta, titleColor:e.target.value})} style={clrInp} /></div>
-                                <div><label style={lCap}>Body Color</label><input type="color" value={meta.primaryColor} onChange={(e)=>setMeta({...meta, primaryColor:e.target.value})} style={clrInp} /></div>
+                                <div><label style={lCap}>Header Color</label><input type="color" value={meta.titleColor} onChange={(e)=>setMeta({...meta, titleColor:e.target.value})} style={clrInp} /></div>
+                                <div><label style={lCap}>Text Color</label><input type="color" value={meta.primaryColor} onChange={(e)=>setMeta({...meta, primaryColor:e.target.value})} style={clrInp} /></div>
                             </div>
-                            <label style={lCap}>Precision</label>
+                            <label style={lCap}>Decimals</label>
                             <select value={meta.decimals} onChange={(e)=>setMeta({...meta, decimals: parseInt(e.target.value)})} style={selS}>
-                                <option value={2}>2 Decimals (AED)</option>
-                                <option value={3}>3 Decimals (OMR)</option>
+                                <option value={2}>2 (Standard)</option>
+                                <option value={3}>3 (OMR/KWD)</option>
                             </select>
                             <label style={lCap}>Logo Position</label>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px', marginBottom:'10px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px' }}>
                                 <button onClick={() => setMeta({ ...meta, logoAlign: 'flex-start' })} style={btnMin}>Left</button>
                                 <button onClick={() => setMeta({ ...meta, logoAlign: 'center' })} style={btnMin}>Center</button>
                                 <button onClick={() => setMeta({ ...meta, logoAlign: 'flex-end' })} style={btnMin}>Right</button>
                             </div>
-                            <input type="file" onChange={handleLogo} style={inpStyle} />
+                            <input type="file" onChange={handleLogo} style={{...inpS, marginTop:'10px'}} />
                         </div>
-
                         <div style={sidebarCard}>
                             <button onClick={saveSettings} style={btnSave}>💾 SAVE AS DEFAULT</button>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}><button onClick={() => exportFile('pdf')} style={btnExport}>GET PDF</button><button onClick={() => exportFile('png')} style={btnExport}>GET PNG</button></div>
-                            <button onClick={() => { if(window.confirm("Confirm reset?")) { localStorage.clear(); window.location.reload(); } }} style={btnReset}>HARD RESET</button>
+                            <button onClick={() => { if(window.confirm("Hard reset?")) { localStorage.clear(); window.location.reload(); } }} style={btnReset}>HARD RESET</button>
                         </div>
                     </aside>
 
                     <main style={paperWrapper}>
-                        <div ref={invoiceRef} id="invoice-paper" style={{ 
-                            ...paperStyle, 
-                            width: pageSize === 'A4' ? '210mm' : '215.9mm',
-                            color: meta.primaryColor,
-                            backgroundColor: '#ffffff'
-                        }}>
-                            
+                        <div ref={invoiceRef} id="invoice-paper" style={{ ...paperStyle, width: pageSize === 'A4' ? '210mm' : '215.9mm', color: meta.primaryColor, backgroundColor: '#ffffff' }}>
                             <div style={{ display: 'flex', justifyContent: meta.logoAlign, marginBottom: '20px' }}>
                                 {meta.logo ? <img src={meta.logo} style={{ maxHeight: '85px', maxWidth: '250px', objectFit:'contain' }} /> : <div style={{height:'85px'}}></div>}
                             </div>
-
                             <div style={headerGrid}>
                                 <div style={{flex: 2}}>
                                     <input value={meta.invoiceTitle} onChange={(e)=>setMeta({...meta, invoiceTitle: e.target.value})} style={{...titleI, color: meta.titleColor}} />
@@ -171,49 +158,40 @@ export default function ProfessionalInvoiceSuite() {
                                     <div style={trnL}>Supplier TRN: <input value={meta.senderTRN} onChange={(e)=>setMeta({...meta, senderTRN: e.target.value})} style={trnInp} /></div>
                                 </div>
                                 <div style={{ flex: 1, textAlign: 'right' }}>
-                                    <div style={mRow}><span>No:</span><input value={meta.invoiceNum} onChange={(e)=>setMeta({...meta, invoiceNum: e.target.value})} style={mInp} /></div>
+                                    <div style={mRow}><span>Invoice No:</span><input value={meta.invoiceNum} onChange={(e)=>setMeta({...meta, invoiceNum: e.target.value})} style={mInp} /></div>
                                     <div style={mRow}><span>Date:</span><input type="date" value={meta.invoiceDate} onChange={(e)=>setMeta({...meta, invoiceDate: e.target.value})} style={mInp} /></div>
-                                    <div style={mRow}><span>Supply:</span><input type="date" value={meta.supplyDate} onChange={(e)=>setMeta({...meta, supplyDate: e.target.value})} style={mInp} /></div>
-                                    <div style={mRow}><span>Curr:</span><input value={meta.currency} onChange={(e)=>setMeta({...meta, currency: e.target.value})} style={{...mInp, fontWeight:'bold', color: meta.titleColor}} /></div>
+                                    <div style={mRow}><span>Supply Date:</span><input type="date" value={meta.supplyDate} onChange={(e)=>setMeta({...meta, supplyDate: e.target.value})} style={mInp} /></div>
+                                    <div style={mRow}><span>Currency:</span><input value={meta.currency} onChange={(e)=>setMeta({...meta, currency: e.target.value})} style={{...mInp, fontWeight:'bold', color: meta.titleColor}} /></div>
                                 </div>
                             </div>
-
                             <div style={{ margin: '30px 0' }}>
                                 <span style={tagL}>BILL TO</span>
                                 <input value={meta.clientName} onChange={(e)=>setMeta({...meta, clientName: e.target.value})} style={clientT} />
                                 <textarea value={meta.clientAddress} onChange={(e)=>setMeta({...meta, clientAddress: e.target.value})} style={addrI} />
                                 <div style={trnL}>Recipient TRN: <input value={meta.clientTRN} onChange={(e)=>setMeta({...meta, clientTRN: e.target.value})} style={trnInp} /></div>
                             </div>
-
                             <table style={tableB}>
-                                <thead style={{...thR, borderBottom: `2px solid ${meta.titleColor}` }}>
-                                    <tr style={{ color: meta.titleColor }}>
-                                        <th style={tc}>Code</th><th style={{...tc, width:'35%'}}>Description</th><th style={tc}>Qty</th><th style={tc}>Price</th><th style={tc}>VAT%</th><th style={tc}>VAT Amt</th><th style={{...tc, textAlign:'right'}}>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {items.map((item) => (
+                                <thead style={{...thR, borderBottom: `2px solid ${meta.titleColor}` }}><tr style={{ color: meta.titleColor }}><th style={tc}>Code</th><th style={{...tc, width:'35%'}}>Description</th><th style={tc}>Qty</th><th style={tc}>Price</th><th style={tc}>VAT%</th><th style={tc}>VAT Amt</th><th style={{...tc, textAlign:'right'}}>Total</th></tr></thead>
+                                <tbody>{items.map((item) => (
                                         <tr key={item.id} style={itemR}>
                                             <td style={tc}><input value={item.code} onChange={(e)=>setItems(items.map(i=>i.id===item.id?{...i, code:e.target.value}:i))} style={rawI} /></td>
                                             <td style={tc}><textarea value={item.desc} onChange={(e)=>setItems(items.map(i=>i.id===item.id?{...i, desc:e.target.value}:i))} style={{...rawI, resize:'none'}} /></td>
-                                            <td style={tc}><input type="number" value={item.qty} onChange={(e)=>setItems(items.map(i=>i.id===item.id?{...i, qty:e.target.value}:i))} style={rawI} /></td>
-                                            <td style={tc}><input type="number" value={item.price} onChange={(e)=>setItems(items.map(i=>i.id===item.id?{...i, price:e.target.value}:i))} style={rawI} /></td>
-                                            <td style={tc}><input type="number" value={item.vatRate} onChange={(e)=>setItems(items.map(i=>i.id===item.id?{...i, vatRate:e.target.value}:i))} style={rawI} /></td>
+                                            <td style={tc}><input type="number" value={item.qty} onChange={(e)=>setItems(items.map(i=>i.id===item.id?{...i, qty:parseFloat(e.target.value)}:i))} style={rawI} /></td>
+                                            <td style={tc}><input type="number" value={item.price} onChange={(e)=>setItems(items.map(i=>i.id===item.id?{...i, price:parseFloat(e.target.value)}:i))} style={rawI} /></td>
+                                            <td style={tc}><input type="number" value={item.vatRate} onChange={(e)=>setItems(items.map(i=>i.id===item.id?{...i, vatRate:parseFloat(e.target.value)}:i))} style={rawI} /></td>
                                             <td style={tc}>{fmt((item.qty*item.price)*(item.vatRate/100))}</td>
                                             <td style={{...tc, textAlign:'right', fontWeight:'bold'}}>{fmt((item.qty*item.price) * (1+item.vatRate/100))}
                                                 <button onClick={()=>setItems(items.filter(i=>i.id!==item.id))} className="no-print" style={delBtn}>&times;</button>
                                             </td>
                                         </tr>
-                                    ))}
-                                </tbody>
+                                    ))}</tbody>
                             </table>
                             <button onClick={()=>setItems([...items, {id:Date.now(), code:'', desc:'', qty:1, price:0, vatRate:5}])} style={addB} className="no-print">+ Add Item Line</button>
-
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '30px', pageBreakInside: 'avoid' }}>
                                 <div style={{ width: '60%' }}>
-                                    <span style={tagLabel}>AMOUNT IN WORDS</span>
+                                    <span style={tagL}>AMOUNT IN WORDS</span>
                                     <div style={{...wordBox, color: meta.titleColor}}>{toWords(grandTotal)}</div>
-                                    <span style={{...tagLabel, marginTop:'20px'}}>NOTES & DECLARATIONS</span>
+                                    <span style={{...tagL, marginTop:'20px'}}>NOTES & DECLARATIONS</span>
                                     <textarea value={meta.notes} onChange={(e)=>setMeta({...meta, notes: e.target.value})} style={notesArea} />
                                 </div>
                                 <div style={{ width: '240px' }}>
@@ -224,7 +202,6 @@ export default function ProfessionalInvoiceSuite() {
                                     </div>
                                 </div>
                             </div>
-
                             <div style={pFoot}>
                                 <input value={meta.footerMsg} onChange={(e)=>setMeta({...meta, footerMsg: e.target.value})} style={footInp} />
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
@@ -237,8 +214,8 @@ export default function ProfessionalInvoiceSuite() {
                 </div>
 
                 <div style={seoCont}>
-                    <h2 style={{color: '#38bdf8'}}>Enterprise Tax Invoice Management</h2>
-                    <p>Compliance-first Tax Invoice Suite optimized for UAE (FTA) and GCC regional trade standards.</p>
+                    <h2 style={{color: '#38bdf8'}}>Professional Tax Invoice Compliance & Management</h2>
+                    <p>SHB Invoice Generator is engineered for the UAE Federal Tax Authority (FTA) requirements. It features real-time line-level VAT calculation, persistent local storage, and high-resolution PDF rendering. Perfect for freelancers and SMEs in Dubai, Abu Dhabi, and the wider GCC region.</p>
                 </div>
             </div>
             <style jsx>{`
@@ -251,7 +228,6 @@ export default function ProfessionalInvoiceSuite() {
     );
 }
 
-// Styles
 const sidebarS = { flex: '1', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '15px' };
 const sidebarCard = { background: '#1e293b', padding: '20px', borderRadius: '15px', border: '1px solid #334155' };
 const cardTitle = { color: '#38bdf8', fontSize: '0.9rem', margin: '0 0 10px 0' };
