@@ -1,65 +1,74 @@
-import React from 'react';
-import ToolboxLayout from '../components/ToolboxLayout';
-
-const tools = [
-    { title: 'Tax Invoice Pro', desc: 'Compliant UAE VAT invoice generator.', link: '/invoicegenerator', icon: '📄' },
-    { title: 'Image Compressor', desc: 'Reduce file size without quality loss.', link: '/imagecompressor', icon: '🗜️' },
-    { title: 'Image Resizer', desc: 'Social media presets and custom sizing.', link: '/imageresizer', icon: '🖼️' },
-    { title: 'Case Converter', desc: 'Advanced text cleaning and case suite.', link: '/caseconverter', icon: '🔡' },
-    { title: 'Bulk QR Studio', desc: 'Generate multiple QR codes as ZIP.', link: '/qrcode', icon: '📱' },
-    { title: 'PDF to Image', desc: 'HD extraction of PDF pages to PNG/JPG.', link: '/pdftoimage', icon: '📑' },
-    { title: 'Image to PDF', desc: 'Combine multiple images into one PDF.', link: '/imagetopdf', icon: '📦' },
-    { title: 'Favicon Gen', desc: 'Create full website icon sets in seconds.', link: '/favicongen', icon: '⭐' },
-    { title: 'EMI Calculator', desc: 'Home and personal loan payment planner.', link: '/emicalculator', icon: '💰' },
-    { title: 'SIP Calculator', desc: 'Investment and wealth gain visualizer.', link: '/sipcalculator', icon: '📈' },
-    { title: 'Thumbnail Grab', desc: 'Extract HD images from any YT link.', link: '/thumbnaildownloader', icon: '🎥' },
-    { title: 'CPS Test', desc: 'Clicks per second speed counter.', link: '/cpstest', icon: '🖱️' },
-    { title: 'BMI Calculator', desc: 'Health and body mass index tracker.', link: '/bmicalculator', icon: '⚖️' },
-    { title: 'Age Calculator', desc: 'Precise chronological age counting.', link: '/agecalculator', icon: '📅' },
-    { title: 'Reaction Test', desc: 'Measure neurological reflex speed.', link: '/reactiontest', icon: '⚡' },
-    { title: 'Unit Converter', desc: 'Metric and imperial conversion suite.', link: '/unitconverter', icon: '🔄' },
-    { title: 'Password Gen', desc: 'Secure, encrypted string generation.', link: '/passwordgen', icon: '🔐' },
-    { title: 'Word Counter', desc: 'Real-time text analysis and reading time.', link: '/wordcounter', icon: '📝' },
-    { title: 'Percentage Suite', desc: 'Fast calculations for business discounts.', link: '/percentagecalculator', icon: '📊' },
-    { title: 'Task Manager', desc: 'Organize chores with local storage save.', link: '/tasklist', icon: '✅' },
-];
+import React, { useState } from 'react';
+import ToolboxLayout, { toolGroups } from '../components/ToolboxLayout';
 
 export default function Home() {
+    const [expandedTool, setExpandedTool] = useState(null);
+
     return (
-        <ToolboxLayout 
-            title="Free Online Utilities" 
-            description="Access the professional SHB ToolBox - 10 free utilities including QR Generator, BMI Calculator, and more."
-        >
-            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '60px 20px' }}>
-                <header style={{ textAlign: 'center', marginBottom: '60px' }}>
-                    <h1 style={{ fontSize: '3rem', color: '#38bdf8', marginBottom: '10px' }}>SHB ToolBox</h1>
-                    <p style={{ color: '#94a3b8', fontSize: '1.2rem' }}>Professional, fast, and free utility tools for everyone.</p>
-                </header>
+        <ToolboxLayout title="Free Online Utilities" description="Access SHB ToolBox - 20 professional-grade utilities grouped for efficiency.">
+            
+            {/* HERO SECTION */}
+            <div style={{ background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)', padding: '100px 20px', textAlign: 'center', borderBottom: '1px solid #334155' }}>
+                <h1 style={{ fontSize: '3.5rem', fontWeight: '900', marginBottom: '20px' }}>One Hub. <span style={{color:'#38bdf8'}}>20+ Powerful Tools.</span></h1>
+                <p style={{ color: '#94a3b8', fontSize: '1.25rem', maxWidth: '700px', margin: '0 auto' }}>Professional, private, and 100% free web utilities for modern digital workflows.</p>
+            </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px' }}>
-                    {tools.map((tool) => (
-                        <a key={tool.link} href={tool.link} style={{ textDecoration: 'none' }}>
-                            <div style={{ 
-                                background: '#1e293b', 
-                                padding: '30px', 
-                                borderRadius: '20px', 
-                                border: '1px solid #334155',
-                                transition: 'transform 0.2s',
-                                height: '100%'
-                            }}>
-                                <span style={{ fontSize: '2rem' }}>{tool.icon}</span>
-                                <h3 style={{ color: '#38bdf8', marginTop: '15px' }}>{tool.title}</h3>
-                                <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: '1.5' }}>{tool.desc}</p>
-                            </div>
-                        </a>
-                    ))}
+            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '80px 20px' }}>
+                
+                {Object.keys(toolGroups).map(groupKey => (
+                    <section key={groupKey} style={{ marginBottom: '80px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px' }}>
+                            <span style={{ fontSize: '2rem' }}>{toolGroups[groupKey].icon}</span>
+                            <h2 style={{ fontSize: '1.8rem', color: '#fff' }}>{toolGroups[groupKey].label}</h2>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+                            {toolGroups[groupKey].tools.map(tool => (
+                                <div 
+                                    key={tool.href} 
+                                    style={{ 
+                                        background: '#1e293b', 
+                                        borderRadius: '20px', 
+                                        padding: '25px', 
+                                        border: '1px solid #334155',
+                                        transition: '0.3s transform',
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                    }}
+                                >
+                                    <h3 style={{ color: '#38bdf8', marginBottom: '10px' }}>{tool.name}</h3>
+                                    <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '20px' }}>{tool.desc}</p>
+                                    
+                                    {expandedTool === tool.name ? (
+                                        <div style={{ animation: 'fadeIn 0.3s', paddingBottom: '60px' }}>
+                                            <p style={{ fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.5', borderTop: '1px solid #334155', paddingTop: '15px' }}>
+                                                Our {tool.name} is optimized for high performance and strict privacy. 
+                                                All calculations and processing occur on your device. 
+                                                Ideal for professional use in high-regulatory environments.
+                                            </p>
+                                            <button onClick={() => setExpandedTool(null)} style={btnLink}>Show Less</button>
+                                        </div>
+                                    ) : (
+                                        <button onClick={() => setExpandedTool(tool.name)} style={btnLink}>Learn More...</button>
+                                    )}
+
+                                    <a href={tool.href} style={btnOpen}>OPEN TOOL</a>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                ))}
+
+                {/* BOTTOM AUTHORITY TEXT */}
+                <div style={{ background: 'rgba(56, 189, 248, 0.05)', padding: '50px', borderRadius: '30px', border: '1px solid #38bdf8', marginTop: '40px', color:'#94a3b8', lineHeight:'1.8' }}>
+                    <h2 style={{color:'#fff', marginBottom:'20px'}}>Why Industry Professionals Choose SHB ToolBox</h2>
+                    <p>Building a digital workflow requires tools that are not only accurate but also respect data privacy. SHB ToolBox is engineered to handle sensitive tasks—from UAE Tax Invoices to Military-Grade Passwords—without ever uploading your data to a cloud server. Our centralized hub provides every utility a developer, student, or business owner needs in one clean, Ad-optimized interface.</p>
                 </div>
-
-                <section style={{ marginTop: '80px', borderTop: '1px solid #1e293b', paddingTop: '40px', color: '#94a3b8' }}>
-                    <h2>Why use SHB ToolBox?</h2>
-                    <p>Our tools are designed for speed and privacy. We use client-side processing to ensure that your sensitive data (like passwords and task lists) remains private whenever possible. With no forced registration and a clean interface, SHB ToolBox is the best hub for daily digital tasks.</p>
-                </section>
             </div>
         </ToolboxLayout>
     );
 }
+
+// Inline Styles
+const btnLink = { background: 'none', border: 'none', color: '#38bdf8', cursor: 'pointer', padding: 0, fontSize: '0.8rem', fontWeight: 'bold', marginTop: '10px' };
+const btnOpen = { position: 'absolute', bottom: '20px', right: '20px', background: '#38bdf8', color: '#0f172a', textDecoration: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 'bold' };
