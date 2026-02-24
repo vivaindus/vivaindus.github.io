@@ -1,102 +1,187 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
 
 export default function AgeCalculator() {
+    const [mounted, setMounted] = useState(false);
     const [birthDate, setBirthDate] = useState('');
     const [ageResult, setAgeResult] = useState(null);
+    const [notification, setNotification] = useState('');
+
+    // Hydration Guard
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Toast Logic
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(''), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
 
     const calculateAge = (e) => {
         e.preventDefault();
         const birth = new Date(birthDate);
-        if (isNaN(birth.getTime())) return alert("Please enter a valid date (YYYY-MM-DD)");
+        if (isNaN(birth.getTime())) {
+            setNotification('⚠️ Please enter a valid date.');
+            return;
+        }
         
         const now = new Date();
+        if (birth > now) {
+            setNotification('⚠️ Birth date cannot be in the future!');
+            return;
+        }
+
         let years = now.getFullYear() - birth.getFullYear();
         let months = now.getMonth() - birth.getMonth();
         let days = now.getDate() - birth.getDate();
 
-        if (days < 0) { months--; days += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
-        if (months < 0) { years--; months += 12; }
+        if (days < 0) { 
+            months--; 
+            const lastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+            days += lastMonth.getDate(); 
+        }
+        if (months < 0) { 
+            years--; 
+            months += 12; 
+        }
         
         const totalDays = Math.floor((now - birth) / (1000 * 60 * 60 * 24));
+        const totalHours = Math.floor((now - birth) / (1000 * 60 * 60));
         
         // Next Birthday logic
         let nextBday = new Date(now.getFullYear(), birth.getMonth(), birth.getDate());
         if (nextBday < now) nextBday.setFullYear(now.getFullYear() + 1);
         const daysToBday = Math.ceil((nextBday - now) / (1000 * 60 * 60 * 24));
 
-        setAgeResult({ years, months, days, totalDays, daysToBday });
+        setAgeResult({ years, months, days, totalDays, totalHours, daysToBday });
+        setNotification('Chronological Age Calculated! 📅');
     };
 
-    return (
-        <ToolboxLayout title="Age Calculator" description="Exact age calculator with manual date entry support.">
-            <div style={{ maxWidth: '600px', margin: '0 auto', padding: '40px 20px', textAlign: 'center' }}>
-                <h1>Age Calculator</h1>
-                <form onSubmit={calculateAge} style={{ background: '#1e293b', padding: '30px', borderRadius: '24px', border: '1px solid #334155' }}>
-                    <label style={{ display: 'block', color: '#94a3b8', marginBottom: '10px' }}>Enter Birth Date (YYYY-MM-DD)</label>
-                    <input 
-                        type="date" 
-                        value={birthDate} 
-                        onChange={(e) => setBirthDate(e.target.value)} 
-                        required 
-                        style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', padding: '15px', borderRadius: '12px', color: '#fff', fontSize: '1.1rem', marginBottom: '20px' }} 
-                    />
-                    <p style={{fontSize: '0.8rem', color: '#64748b', marginBottom: '15px'}}>Tip: You can type the date directly or use the calendar icon.</p>
-                    <button type="submit" style={{ width: '100%', background: '#38bdf8', color: '#0f172a', border: 'none', padding: '15px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>CALCULATE</button>
-                </form>
+    if (!mounted) return <ToolboxLayout title="Age Calculator" description="Loading..."><div style={{padding:'100px', textAlign:'center', color:'#94a3b8'}}>Synchronizing Calendar Engine...</div></ToolboxLayout>;
 
-                {ageResult && (
-                    <div style={{ marginTop: '30px', animation: 'fadeIn 0.5s' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
-                            <div style={{ background: '#1e293b', padding: '20px', borderRadius: '16px' }}><h2>{ageResult.years}</h2><small>YEARS</small></div>
-                            <div style={{ background: '#1e293b', padding: '20px', borderRadius: '16px' }}><h2>{ageResult.months}</h2><small>MONTHS</small></div>
-                            <div style={{ background: '#1e293b', padding: '20px', borderRadius: '16px' }}><h2>{ageResult.days}</h2><small>DAYS</small></div>
-                        </div>
-                        <div style={{ marginTop: '20px', padding: '20px', background: '#38bdf8', color: '#0f172a', borderRadius: '16px', fontWeight: 'bold' }}>
-                            🎂 {ageResult.daysToBday} days left until your next birthday!
-                        </div>
+    return (
+        <ToolboxLayout 
+            title="Professional Age Calculator - Precise Chronological Age Finder" 
+            description="Calculate your exact age in years, months, days, and hours. Track your next birthday and learn about the mathematics of time and calendars 100% privately."
+        >
+            <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 20px' }}>
+                
+                {/* NOTIFICATION */}
+                {notification && (
+                    <div style={{ position: 'fixed', top: '80px', right: '20px', background: '#38bdf8', color: '#0f172a', padding: '12px 24px', borderRadius: '10px', fontWeight: 'bold', zIndex: 1000, boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }}>
+                        {notification}
                     </div>
                 )}
-                {/* --- SEO CONTENT SECTION START --- */}
-                <div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8', textAlign: 'left' }}>
-                    <h2 style={{ color: '#38bdf8' }}>How Does the Age Calculator Work?</h2>
-                    <p>
-                        The SHB Age Calculator is a precision utility that determines the exact interval between your birth date and the current time. 
-                        While most people think of their age only in years, our tool breaks it down into months and days to give you a 
-                        chronological age reading that is accurate for legal documents, medical forms, or personal milestones.
-                    </p>
 
-                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Calculate Years, Months, and Days</h3>
-                    <p>
-                        Calculating age manually can be tricky because of the varying number of days in each month and the occurrence of leap years. 
-                        Our algorithm automatically adjusts for these factors:
+                {/* --- TOP SECTION: THE HOOK --- */}
+                <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+                    <h1 style={{ color: '#38bdf8', fontSize: '2.5rem' }}>Precision Age Calculator</h1>
+                    <p style={{ color: '#94a3b8', fontSize: '1.2rem', maxWidth: '850px', margin: '15px auto', lineHeight: '1.6' }}>
+                        Time is our most valuable asset. While most know their age in years, our <strong>Chronological Delta Engine</strong> 
+                        provides a high-precision breakdown of your time footprint on Earth, down to the exact hour.
                     </p>
-                    <ul>
-                        <li><strong>Precise Years:</strong> Calculated based on the standard Gregorian calendar.</li>
-                        <li><strong>Month Tracking:</strong> Accounts for months with 28, 30, and 31 days to ensure your "month anniversary" is correct.</li>
-                        <li><strong>Next Birthday Countdown:</strong> We provide a live countdown so you know exactly how many days are left until your next celebration.</li>
-                    </ul>
-
-                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Privacy and Security</h3>
-                    <p>
-                        We understand that your birth date is sensitive personal information. That is why the SHB ToolBox 
-                        processes all date calculations <strong>client-side</strong>. This means your birth date never leaves 
-                        your computer and is never saved to our database or Supabase records. You can use this tool with 
-                        complete peace of mind knowing your data is private.
-                    </p>
-
-                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Common Uses for the Age Calculator</h3>
-                    <p>
-                        This tool is perfect for:
-                    </p>
-                    <ol>
-                        <li>Filling out government or insurance forms that require exact chronological age.</li>
-                        <li>Calculating the age of babies or pets where "months" are just as important as years.</li>
-                        <li>Finding out exactly how many days you have been alive to celebrate "10,000 days" or other unique milestones.</li>
-                    </ol>
                 </div>
-                {/* --- SEO CONTENT SECTION END --- */}
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '30px' }}>
+                    
+                    {/* INPUT SECTION */}
+                    <form onSubmit={calculateAge} style={{ background: '#1e293b', padding: '35px', borderRadius: '30px', border: '1px solid #334155', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
+                        <div style={{ marginBottom: '30px' }}>
+                            <label style={lCap}>ENTER DATE OF BIRTH</label>
+                            <input 
+                                type="date" 
+                                value={birthDate} 
+                                onChange={(e) => setBirthDate(e.target.value)} 
+                                required 
+                                style={inputStyle} 
+                            />
+                        </div>
+                        <button type="submit" style={btnPrimary}>CALCULATE EXACT AGE</button>
+                    </form>
+
+                    {/* RESULTS SECTION */}
+                    <div style={{ background: '#1e293b', padding: '35px', borderRadius: '30px', border: '1px solid #334155', textAlign: 'center' }}>
+                        {!ageResult ? (
+                            <div style={{ color: '#475569', marginTop: '100px' }}>Enter your DOB to see your timeline</div>
+                        ) : (
+                            <div style={{ animation: 'fadeIn 0.5s' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
+                                    <div style={statItem}><h2 style={resH2}>{ageResult.years}</h2><small style={lCap}>Years</small></div>
+                                    <div style={statItem}><h2 style={resH2}>{ageResult.months}</h2><small style={lCap}>Months</small></div>
+                                    <div style={statItem}><h2 style={resH2}>{ageResult.days}</h2><small style={lCap}>Days</small></div>
+                                </div>
+                                <div style={{ marginTop: '20px', padding: '20px', background: '#0f172a', borderRadius: '15px', border: '1px solid #334155' }}>
+                                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.8rem' }}>Next Birthday In:</p>
+                                    <h3 style={{ color: '#38bdf8', margin: '5px 0' }}>🎂 {ageResult.daysToBday} Days</h3>
+                                </div>
+                                <div style={{ marginTop: '15px', fontSize: '0.75rem', color: '#475569' }}>
+                                    Total Hours Lived: {ageResult.totalHours.toLocaleString()}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* --- MASSIVE KNOWLEDGE HUB (BOTTOM SEO) --- */}
+                <div style={{ marginTop: '100px', borderTop: '1px solid #334155', paddingTop: '60px', color: '#cbd5e1', lineHeight: '1.9' }}>
+                    <h2 style={{ color: '#38bdf8', fontSize: '2.2rem', marginBottom: '30px' }}>Chronological Intelligence: More Than Just a Number</h2>
+                    <p>
+                        Calculating age seems straightforward, but it involves complex mathematics due to the irregularities of the 
+                        <strong> Gregorian Calendar</strong>. With months varying from 28 to 31 days and the inclusion of Leap Years 
+                        every four years, determining an exact age requires a dynamic algorithm. Our tool handles these nuances to 
+                        provide a legally and medically accurate reading.
+                    </p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '40px', marginTop: '60px' }}>
+                        <div>
+                            <h4 style={{ color: '#fff' }}>The Leap Year Factor</h4>
+                            <p style={{ fontSize: '0.95rem', color: '#94a3b8' }}>
+                                A standard year has 365 days, but the Earth actually takes 365.24219 days to orbit the Sun. 
+                                Our calculator adjusts for the "intercalary day" added to February, ensuring that individuals 
+                                born on <strong>February 29th</strong> or during leap cycles receive an mathematically precise 
+                                total-day count.
+                            </p>
+                        </div>
+                        <div>
+                            <h4 style={{ color: '#fff' }}>Medical & Legal Utility</h4>
+                            <p style={{ fontSize: '0.95rem', color: '#94a3b8' }}>
+                                Precision age is vital for pediatric developmental milestones, insurance underwriting, 
+                                and legal eligibility. Whether you are calculating <strong>retirement readiness</strong> 
+                                in the UAE or verifying school admission windows, knowing the months and days is as critical 
+                                as knowing the years.
+                            </p>
+                        </div>
+                    </div>
+
+                    <h3 style={{ color: '#fff', marginTop: '50px', fontSize: '1.5rem' }}>How Our Algorithm Works</h3>
+                    <p>
+                        The SHB Age Engine performs a three-tier subtraction process:
+                    </p>
+                    <ol style={{ paddingLeft: '20px', marginTop: '20px' }}>
+                        <li style={{ marginBottom: '15px' }}><strong>Year Delta:</strong> Calculates the base difference between the current year and the birth year.</li>
+                        <li style={{ marginBottom: '15px' }}><strong>Month Normalization:</strong> Adjusts for the current date relative to the birth month, handling "rollover" where the current day is less than the birth day.</li>
+                        <li style={{ marginBottom: '15px' }}><strong>Hourly Conversion:</strong> Utilizes Unix timestamps (milliseconds since Jan 1, 1970) to derive the absolute total of hours and days spent.</li>
+                    </ol>
+
+                    <h3 style={{ color: '#fff', marginTop: '50px', fontSize: '1.5rem' }}>100% Privacy & Data Confidentiality</h3>
+                    <p>
+                        Your date of birth is sensitive personal information. At <strong>SHB ToolBox</strong>, we follow a 
+                        strict <strong>No-Cloud Policy</strong>. Your date of birth is processed 100% locally in your 
+                        browser. We do not store your DOB in a database, and we do not use your age for targeted advertising 
+                        profiles. You can calculate your most private milestones with complete security.
+                    </p>
+                </div>
             </div>
         </ToolboxLayout>
     );
 }
+
+// Styling Constants
+const lCap = { fontSize: '0.7rem', color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '10px', textTransform: 'uppercase' };
+const inputStyle = { width: '100%', background: '#0f172a', border: '1px solid #334155', padding: '18px', borderRadius: '15px', color: '#fff', fontSize: '1.2rem', outline: 'none' };
+const btnPrimary = { width: '100%', background: '#38bdf8', color: '#0f172a', border: 'none', padding: '20px', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1.1rem' };
+const statItem = { background: '#0f172a', padding: '15px', borderRadius: '15px', border: '1px solid #334155' };
+const resH2 = { color: '#fff', margin: '0 0 5px 0', fontSize: '1.8rem' };
