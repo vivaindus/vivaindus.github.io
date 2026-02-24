@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
 import imageCompression from 'browser-image-compression';
 
@@ -8,6 +8,14 @@ export default function ImageCompressor() {
     const [originalFile, setOriginalFile] = useState(null);
     const [quality, setQuality] = useState(0.8);
     const [compressing, setCompressing] = useState(false);
+    const [notification, setNotification] = useState('');
+
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(''), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
 
     const handleUpload = (e) => {
         const file = e.target.files[0];
@@ -15,6 +23,7 @@ export default function ImageCompressor() {
             setOriginalFile(file);
             setOriginalImage(URL.createObjectURL(file));
             setCompressedImage(null);
+            setNotification('Image Loaded. Select quality and compress! 📸');
         }
     };
 
@@ -23,13 +32,14 @@ export default function ImageCompressor() {
         setCompressing(true);
         const options = {
             maxSizeMB: 1,
-            maxWidthOrHeight: 1920,
+            maxWidthOrHeight: 2560,
             useWebWorker: true,
             initialQuality: quality
         };
         try {
             const compressedFile = await imageCompression(originalFile, options);
             setCompressedImage(URL.createObjectURL(compressedFile));
+            setNotification('Optimization Complete! Ready to download. ✅');
         } catch (error) {
             console.error(error);
         }
@@ -37,108 +47,124 @@ export default function ImageCompressor() {
     };
 
     return (
-        <ToolboxLayout title="Pro Image Compressor" description="Compress JPG, PNG, and WebP images locally without losing quality.">
-            <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 20px' }}>
-                <h1 style={{ textAlign: 'center', color: '#38bdf8', marginBottom: '10px' }}>Image Compressor</h1>
-                <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '30px' }}>Reduce file size without losing visual quality.</p>
+        <ToolboxLayout 
+            title="Image Compressor - Reduce JPG, PNG & WebP File Size Online" 
+            description="Professional image compression tool. Reduce file size by up to 90% without losing quality. Optimized for Web, Email, and SEO."
+        >
+            <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 20px' }}>
+                
+                {notification && (
+                    <div style={{ position: 'fixed', top: '80px', right: '20px', background: '#38bdf8', color: '#0f172a', padding: '12px 24px', borderRadius: '10px', fontWeight: 'bold', zIndex: 1000, boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }}>
+                        {notification}
+                    </div>
+                )}
 
-                <div style={{ background: '#1e293b', padding: '30px', borderRadius: '24px', border: '1px solid #334155' }}>
-                    
-                    {/* UPLOAD SECTION */}
+                {/* --- TOP INTERESTING SECTION --- */}
+                <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+                    <h1 style={{ color: '#38bdf8', fontSize: '2.5rem' }}>AI-Powered Image Compressor</h1>
+                    <p style={{ color: '#94a3b8', fontSize: '1.2rem', maxWidth: '800px', margin: '15px auto', lineHeight: '1.6' }}>
+                        Slow websites lose visitors. Reduce your image sizes by <strong>up to 90%</strong> without sacrificing 
+                        visual clarity. Perfect for bloggers, photographers, and web designers.
+                    </p>
+                    <div style={{ display: 'inline-flex', gap: '15px', background: 'rgba(56, 189, 248, 0.1)', padding: '10px 25px', borderRadius: '50px', color: '#38bdf8', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                        <span>⚡ Zero Data Usage</span>
+                        <span>🔒 100% Private</span>
+                        <span>🚀 Next-Gen WebP Support</span>
+                    </div>
+                </div>
+
+                <div style={{ background: '#1e293b', padding: '40px', borderRadius: '30px', border: '1px solid #334155', boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
                     {!originalImage ? (
                         <div style={dropZone}>
                             <input type="file" accept="image/*" onChange={handleUpload} style={fileInput} />
-                            <p>📸 Click or Drag Image to Upload</p>
-                            <small>Supports JPG, PNG, WebP</small>
+                            <div style={{fontSize:'4rem', marginBottom:'20px'}}>🖼️</div>
+                            <p style={{fontSize:'1.3rem', color:'#fff'}}>Drag & Drop Image Here</p>
+                            <p style={{color:'#475569'}}>Supports JPEG, PNG, HEIC, and WebP</p>
                         </div>
                     ) : (
                         <div>
-                            {/* COMPARISON VIEW */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
                                 <div style={imageCard}>
-                                    <small style={{color:'#38bdf8'}}>ORIGINAL</small>
+                                    <small style={{color:'#64748b', fontWeight:'bold'}}>ORIGINAL FILE</small>
                                     <img src={originalImage} style={imgPreview} alt="Original" />
-                                    <p>{(originalFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                                    <p style={{fontWeight:'bold', color:'#fff', marginTop:'10px'}}>{(originalFile.size / 1024 / 1024).toFixed(2)} MB</p>
                                 </div>
                                 <div style={imageCard}>
-                                    <small style={{color:'#34d399'}}>COMPRESSED</small>
+                                    <small style={{color:'#34d399', fontWeight:'bold'}}>COMPRESSED VERSION</small>
                                     {compressedImage ? (
                                         <>
                                             <img src={compressedImage} style={imgPreview} alt="Compressed" />
-                                            <p>Optimized</p>
+                                            <p style={{fontWeight:'bold', color:'#34d399', marginTop:'10px'}}>Ready!</p>
                                         </>
-                                    ) : <div style={placeholderBox}>Waiting...</div>}
+                                    ) : <div style={placeholderBox}>Calculated after processing...</div>}
                                 </div>
                             </div>
 
-                            {/* CONTROLS */}
-                            <div style={{ background: '#0f172a', padding: '20px', borderRadius: '15px', marginBottom: '20px' }}>
-                                <label style={{ color: '#94a3b8', display: 'block', marginBottom: '10px' }}>Compression Quality: {Math.round(quality * 100)}%</label>
-                                <input type="range" min="0.1" max="1" step="0.1" value={quality} onChange={(e) => setQuality(parseFloat(e.target.value))} style={{ width: '100%' }} />
+                            <div style={{ background: '#0f172a', padding: '25px', borderRadius: '20px', marginBottom: '25px' }}>
+                                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'10px'}}>
+                                    <label style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight:'bold' }}>Target Compression Quality</label>
+                                    <span style={{ color: '#38bdf8', fontWeight:'bold' }}>{Math.round(quality * 100)}%</span>
+                                </div>
+                                <input type="range" min="0.1" max="1" step="0.05" value={quality} onChange={(e) => setQuality(parseFloat(e.target.value))} style={{ width: '100%', accentColor:'#38bdf8' }} />
+                                <div style={{ display:'flex', justifyContent:'space-between', marginTop:'5px', fontSize:'0.7rem', color:'#475569'}}>
+                                    <span>MAX COMPRESSION</span>
+                                    <span>MAX QUALITY</span>
+                                </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '10px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '15px' }}>
                                 <button onClick={handleCompress} disabled={compressing} style={btnPrimary}>
-                                    {compressing ? 'Compressing...' : 'START COMPRESSION'}
+                                    {compressing ? 'OPTIMIZING PIXELS...' : 'COMPRESS NOW'}
                                 </button>
-                                <button onClick={() => setOriginalImage(null)} style={btnSecondary}>RESET</button>
+                                <button onClick={() => { setOriginalImage(null); setCompressedImage(null); }} style={btnSecondary}>RESET</button>
                             </div>
 
                             {compressedImage && (
-                                <a href={compressedImage} download={`shb_compressed_${originalFile.name}`} style={btnDownload}>
-                                    DOWNLOAD COMPRESSED IMAGE
+                                <a href={compressedImage} download={`shb_optimized_${originalFile.name}`} style={btnDownload}>
+                                    💾 DOWNLOAD OPTIMIZED IMAGE
                                 </a>
                             )}
                         </div>
                     )}
                 </div>
 
-                {/* --- SEO CONTENT SECTION --- */}
-                <div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8' }}>
-                    <h2 style={{ color: '#38bdf8' }}>Professional Online Image Compression</h2>
-                    <p>
-                        In the modern digital landscape, image optimization is critical for website performance, email efficiency, and storage management. 
-                        The SHB Image Compressor provides a professional-grade solution to reduce the file size of your photos without 
-                        sacrificing visible clarity.
-                    </p>
+                {/* --- MASSIVE KNOWLEDGE HUB (BOTTOM SEO) --- */}
+                <div style={{ marginTop: '100px', borderTop: '1px solid #334155', paddingTop: '60px', color: '#cbd5e1', lineHeight: '1.8' }}>
+                    <h2 style={{ color: '#38bdf8', fontSize: '2rem', marginBottom: '30px' }}>Mastering Image Optimization: Speed up your Website and SEO</h2>
+                    <p>In the digital age, high-resolution photography is more accessible than ever, but it comes at a cost. Large image files are the #1 cause of slow-loading websites. The SHB Image Compressor uses <strong>Smart Re-sampling Algorithms</strong> to strip unnecessary metadata and compress pixel arrays without destroying the visual beauty of your photos.</p>
 
-                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Why Optimize Your Images?</h3>
-                    <p>
-                        High-resolution images from modern smartphones and cameras often exceed 5MB in size. While these look great, they cause 
-                        significant issues:
-                    </p>
-                    <ul>
-                        <li><strong>SEO & Page Speed:</strong> Large images slow down websites, leading to lower rankings on Google.</li>
-                        <li><strong>Email Limits:</strong> Many email providers cap attachments at 20MB. Compressing images allows you to send more files in a single message.</li>
-                        <li><strong>Storage Costs:</strong> Cloud storage like Google Drive or Dropbox fills up quickly with raw photos. Compressed versions save up to 80% of space.</li>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '40px', marginTop: '50px' }}>
+                        <div>
+                            <h3 style={{ color: '#fff', fontSize: '1.2rem' }}>1. The SEO Advantage</h3>
+                            <p style={{ fontSize: '0.95rem', color: '#94a3b8' }}>Google uses "Core Web Vitals" to rank websites. One of the biggest metrics is <strong>Largest Contentful Paint (LCP)</strong>. By compressing your hero banners and blog images, you ensure your page loads in under 2 seconds, boosting your ranking on Google Search.</p>
+                        </div>
+                        <div>
+                            <h3 style={{ color: '#fff', fontSize: '1.2rem' }}>2. Storage & Bandwidth Economy</h3>
+                            <p style={{ fontSize: '0.95rem', color: '#94a3b8' }}>For professional photographers and agencies, cloud storage costs (Google Drive, AWS, Dropbox) add up. Reducing a 5MB image to 500KB saves 90% of your storage space without the viewer ever noticing a difference in quality.</p>
+                        </div>
+                    </div>
+
+                    <h3 style={{ color: '#fff', marginTop: '50px', fontSize: '1.5rem' }}>Why Use Client-Side Compression?</h3>
+                    <p>Most "Free Image Compressors" work by uploading your private photos to their company servers. This is a massive privacy risk. At <strong>SHB ToolBox</strong>, we use <strong>Browser-Level WebWorkers</strong>. The compression happens inside your device's memory (RAM). Your photos are never sent to the internet, making this tool 100% secure for sensitive documents and personal galleries.</p>
+
+                    <h3 style={{ color: '#fff', marginTop: '50px', fontSize: '1.5rem' }}>How to choose the right quality setting?</h3>
+                    <ul style={{ paddingLeft: '20px', marginTop:'20px' }}>
+                        <li style={{ marginBottom: '15px' }}><strong>90% - Professional Portfolio:</strong> Best for high-end photography where you need to preserve every fine detail for Retina screens.</li>
+                        <li style={{ marginBottom: '15px' }}><strong>80% - Blog & General Use:</strong> The "Sweet Spot." This reduces file size by 70-80% with zero visible distortion for most users.</li>
+                        <li style={{ marginBottom: '15px' }}><strong>60% - Social Media & Mobile Apps:</strong> Maximum savings. Great for fast-scrolling feeds where speed is more important than raw resolution.</li>
                     </ul>
-
-                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Smart Local Compression Technology</h3>
-                    <p>
-                        Safety is our priority. Unlike other online tools that upload your private photos to a central server, the 
-                        SHB ToolBox uses <strong>Client-Side browser processing</strong>. Your images never leave your computer. 
-                        We use the `browser-image-compression` engine to perform advanced mathematical re-encoding directly in your 
-                        RAM, ensuring your personal and professional photos remain 100% private.
-                    </p>
-
-                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Supported Formats and Usage</h3>
-                    <p>
-                        Our suite fully supports <strong>JPEG, PNG, and WebP</strong> formats. Use the quality slider to find the 
-                        perfect balance between file size reduction and visual detail. We recommend 80% for web use and 90% for 
-                        high-quality social media posts.
-                    </p>
                 </div>
             </div>
         </ToolboxLayout>
     );
 }
 
-// --- STYLES ---
-const dropZone = { border: '3px dashed #334155', padding: '60px', borderRadius: '20px', textAlign: 'center', color: '#94a3b8', position: 'relative', cursor: 'pointer' };
+// Styling Constants
+const dropZone = { border: '3px dashed #334155', padding: '80px 20px', borderRadius: '30px', textAlign: 'center', color: '#94a3b8', position: 'relative', background: '#0f172a', transition:'0.3s' };
 const fileInput = { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' };
-const imageCard = { background: '#0f172a', padding: '15px', borderRadius: '15px', textAlign: 'center' };
-const imgPreview = { width: '100%', height: '150px', objectFit: 'cover', borderRadius: '10px', marginTop: '10px' };
-const placeholderBox = { height: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: '0.8rem' };
-const btnPrimary = { flex: 2, background: '#38bdf8', color: '#0f172a', border: 'none', padding: '15px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' };
-const btnSecondary = { flex: 1, background: '#334155', color: '#fff', border: 'none', padding: '15px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' };
-const btnDownload = { display: 'block', marginTop: '15px', textAlign: 'center', background: '#34d399', color: '#0f172a', textDecoration: 'none', padding: '15px', borderRadius: '12px', fontWeight: 'bold' };
+const imageCard = { background: '#0f172a', padding: '20px', borderRadius: '20px', textAlign: 'center', border: '1px solid #334155' };
+const imgPreview = { width: '100%', height: '200px', objectFit: 'contain', borderRadius: '12px', marginTop: '15px' };
+const placeholderBox = { height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: '0.8rem', fontStyle:'italic' };
+const btnPrimary = { background: '#38bdf8', color: '#0f172a', border: 'none', padding: '20px', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer', fontSize:'1.1rem' };
+const btnSecondary = { background: 'none', border: '1px solid #334155', color: '#94a3b8', padding: '20px', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' };
+const btnDownload = { display: 'block', marginTop: '20px', textAlign: 'center', background: '#34d399', color: '#0f172a', textDecoration: 'none', padding: '20px', borderRadius: '15px', fontWeight: 'bold', fontSize:'1.1rem' };

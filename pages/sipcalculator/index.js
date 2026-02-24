@@ -3,28 +3,34 @@ import ToolboxLayout from '../../components/ToolboxLayout';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
 
-// Fix for Vercel/SSR with Chart.js
-if (typeof window !== 'undefined') {
-    ChartJS.register(ArcElement, Tooltip, Legend);
-}
-
 export default function SIPCalculator() {
+    const [mounted, setMounted] = useState(false);
     const [monthlyInvestment, setMonthlyInvestment] = useState(5000);
     const [expectedReturn, setExpectedReturn] = useState(12);
     const [timePeriod, setTimePeriod] = useState(10);
     const [investedAmount, setInvestedAmount] = useState(0);
     const [estimatedReturns, setEstimatedReturns] = useState(0);
     const [totalValue, setTotalValue] = useState(0);
-    const [currency, setCurrency] = useState('AED'); // Fixed local currency state
+    const currency = 'AED';
 
+    // Hydration Guard & Chart Registration
     useEffect(() => {
-        const P = monthlyInvestment;
-        const i = expectedReturn / 12 / 100;
-        const n = timePeriod * 12;
+        setMounted(true);
+        if (typeof window !== 'undefined') {
+            ChartJS.register(ArcElement, Tooltip, Legend);
+        }
+    }, []);
+
+    // SIP Calculation Logic
+    useEffect(() => {
+        const P = parseFloat(monthlyInvestment) || 0;
+        const i = (parseFloat(expectedReturn) || 0) / 12 / 100;
+        const n = (parseFloat(timePeriod) || 0) * 12;
         
         if (i === 0) {
-            setInvestedAmount(P * n);
-            setTotalValue(P * n);
+            const total = P * n;
+            setInvestedAmount(total);
+            setTotalValue(total);
             setEstimatedReturns(0);
         } else {
             const totalValueCalc = P * ((Math.pow(1 + i, n) - 1) / i) * (1 + i);
@@ -45,109 +51,144 @@ export default function SIPCalculator() {
         }],
     };
 
+    if (!mounted) return <ToolboxLayout title="SIP Calculator" description="Loading Planner..."><div style={{padding:'100px', textAlign:'center', color:'#94a3b8'}}>Initializing Financial Engine...</div></ToolboxLayout>;
+
     return (
         <ToolboxLayout 
-            title="SIP Calculator - Systematic Investment Planner" 
-            description="Calculate your future wealth with our SIP calculator. Learn how compounding works and plan your financial goals with UAE-friendly tools."
+            title="SIP Calculator - Systematic Investment Plan & Wealth Planner" 
+            description="Calculate your mutual fund returns with our professional SIP calculator. Visualize compounding and plan your financial freedom with precision."
         >
-            <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 20px' }}>
+            <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 20px' }}>
                 
-                {/* --- TOP INTERESTING INTRO --- */}
-                <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                {/* --- TOP SECTION: THE HOOK --- */}
+                <div style={{ textAlign: 'center', marginBottom: '50px' }}>
                     <h1 style={{ color: '#34d399', fontSize: '2.5rem' }}>Systematic Investment Plan (SIP) Calculator</h1>
-                    <p style={{ color: '#94a3b8', fontSize: '1.1rem', maxWidth: '700px', margin: '15px auto' }}>
-                        Did you know that investing just {currency} 1,000 monthly for 20 years at 12% return can grow into nearly 1 Million? 
-                        Use our tool below to visualize your path to financial freedom.
+                    <p style={{ color: '#94a3b8', fontSize: '1.2rem', maxWidth: '850px', margin: '15px auto', lineHeight: '1.6' }}>
+                        Consistent investing is the key to creating multi-generational wealth. Even a small monthly contribution of 
+                        <strong> {currency} 500</strong> can transform into a significant corpus over time through the 
+                        unrivaled power of compound interest. Use our pro-grade tool below to simulate your future.
                     </p>
                 </div>
 
+                {/* --- MAIN CALCULATOR INTERFACE --- */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '30px' }}>
-                    {/* INPUTS */}
-                    <div style={{ background: '#1e293b', padding: '30px', borderRadius: '24px', border: '1px solid #334155' }}>
+                    {/* INPUTS PANEL */}
+                    <div style={{ background: '#1e293b', padding: '35px', borderRadius: '24px', border: '1px solid #334155', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
                         <div style={inputGroup}>
                             <label style={labelStyle}>Monthly Investment ({currency})</label>
                             <input type="number" value={monthlyInvestment} onChange={(e) => setMonthlyInvestment(e.target.value)} style={inputStyle} />
                         </div>
                         <div style={inputGroup}>
-                            <label style={labelStyle}>Expected Return Rate (% P.A.)</label>
+                            <label style={labelStyle}>Expected Annual Return (%)</label>
                             <input type="number" value={expectedReturn} onChange={(e) => setExpectedReturn(e.target.value)} style={inputStyle} />
                         </div>
                         <div style={inputGroup}>
-                            <label style={labelStyle}>Time Period (Years)</label>
+                            <label style={labelStyle}>Investment Duration (Years)</label>
                             <input type="number" value={timePeriod} onChange={(e) => setTimePeriod(e.target.value)} style={inputStyle} />
                         </div>
 
-                        <div style={{ marginTop: '30px', padding: '20px', background: '#0f172a', borderRadius: '15px', borderLeft: '5px solid #34d399' }}>
-                            <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.9rem' }}>Estimated Wealth at Maturity</p>
-                            <h2 style={{ color: '#34d399', margin: '5px 0' }}>{currency} {Math.round(totalValue).toLocaleString()}</h2>
+                        <div style={{ marginTop: '35px', padding: '25px', background: '#0f172a', borderRadius: '20px', borderLeft: '6px solid #34d399' }}>
+                            <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.85rem', fontWeight: 'bold' }}>TOTAL ESTIMATED VALUE</p>
+                            <h2 style={{ color: '#34d399', fontSize: '2.8rem', margin: '10px 0' }}>
+                                {currency} {Math.round(totalValue).toLocaleString()}
+                            </h2>
                         </div>
                     </div>
 
-                    {/* CHART & STATS */}
-                    <div style={{ background: '#1e293b', padding: '30px', borderRadius: '24px', border: '1px solid #334155', textAlign: 'center' }}>
-                        <div style={{ width: '250px', margin: '0 auto 20px' }}>
-                            {typeof window !== 'undefined' && <Pie data={chartData} options={{ plugins: { legend: { labels: { color: '#94a3b8' } } } }} />}
+                    {/* VISUALS PANEL */}
+                    <div style={{ background: '#1e293b', padding: '35px', borderRadius: '24px', border: '1px solid #334155', textAlign: 'center' }}>
+                        <h4 style={{ color: '#94a3b8', marginBottom: '25px' }}>Wealth Breakdown</h4>
+                        <div style={{ width: '250px', margin: '0 auto 30px' }}>
+                            <Pie data={chartData} options={{ plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 20 } } } }} />
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                             <div style={statItem}>
-                                <small style={{color:'#94a3b8'}}>Invested Amount</small>
-                                <br/>
-                                <strong style={{color: '#fff'}}>{currency} {Math.round(investedAmount).toLocaleString()}</strong>
+                                <small style={{ color: '#64748b' }}>Invested Principal</small>
+                                <div style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 'bold', marginTop: '5px' }}>{Math.round(investedAmount).toLocaleString()}</div>
                             </div>
                             <div style={statItem}>
-                                <small style={{color:'#94a3b8'}}>Wealth Gained</small>
-                                <br/>
-                                <strong style={{color: '#34d399'}}>{currency} {Math.round(estimatedReturns).toLocaleString()}</strong>
+                                <small style={{ color: '#64748b' }}>Wealth Gained</small>
+                                <div style={{ color: '#34d399', fontSize: '1.1rem', fontWeight: 'bold', marginTop: '5px' }}>{Math.round(estimatedReturns).toLocaleString()}</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* --- MASSIVE KNOWLEDGE SECTION (BOTTOM) --- */}
-                <div style={{ marginTop: '80px', borderTop: '1px solid #334155', paddingTop: '60px', color: '#cbd5e1', lineHeight: '1.8' }}>
-                    <h2 style={{ color: '#34d399', fontSize: '1.8rem' }}>Understanding SIP: The Power of Compounding</h2>
+                {/* --- MASSIVE KNOWLEDGE HUB (ADSENSE BOOSTER) --- */}
+                <div style={{ marginTop: '100px', borderTop: '1px solid #334155', paddingTop: '60px', color: '#cbd5e1', lineHeight: '1.9', textAlign: 'left' }}>
+                    <h2 style={{ color: '#34d399', fontSize: '2.2rem', marginBottom: '30px' }}>The Definitive Guide to SIP: Building Wealth Systematically</h2>
                     <p>
-                        A Systematic Investment Plan (SIP) is a disciplined way of investing where a fixed amount is 
-                        invested at regular intervals. At SHB ToolBox, we built this SIP Calculator to help you understand that wealth creation 
-                        is not about timing the market, but about <strong>time in the market</strong>.
+                        A Systematic Investment Plan (SIP) is a financial strategy that allows individuals to invest a fixed amount of money 
+                        regularly in a mutual fund or equity scheme. Unlike a lumpsum investment where you deploy a large amount of capital 
+                        all at once, SIP encourages the habit of monthly saving. At <strong>SHB ToolBox</strong>, our SIP Calculator 
+                        is designed to show you that wealth isn't just for those with large initial capital—it is for anyone with 
+                        patience and discipline.
                     </p>
 
-                    <h3 style={{ color: '#38bdf8', marginTop: '40px' }}>How Does Our SIP Calculator Work?</h3>
+                    <h3 style={{ color: '#38bdf8', marginTop: '50px', fontSize: '1.6rem' }}>The Mathematics of Your Investment</h3>
                     <p>
-                        This tool uses a compound interest formula specifically designed for recurring investments. 
-                        The calculation follows the formula: <strong>M = P × ([(1 + i)^n – 1] / i) × (1 + i)</strong>. 
-                        Where 'M' is the maturity value, 'P' is the monthly investment, 'i' is the rate, and 'n' is the number of months.
+                        Our calculator uses the industry-standard compound interest formula to determine the maturity value of your 
+                        regular payments. The formula used is: <br/>
+                        <code style={{ background: '#0f172a', padding: '10px', borderRadius: '8px', display: 'block', margin: '20px 0', textAlign: 'center', color: '#34d399', fontSize: '1.2rem' }}>
+                            M = P × ([(1 + i)^n – 1] / i) × (1 + i)
+                        </code>
+                        In this mathematical model: <br/>
+                        • <strong>M</strong> represents the final amount you receive at maturity. <br/>
+                        • <strong>P</strong> is the fixed amount you invest at regular intervals (monthly). <br/>
+                        • <strong>i</strong> is the periodic rate of interest (Annual rate divided by 12 months). <br/>
+                        • <strong>n</strong> is the total number of periodic payments (Total years multiplied by 12).
                     </p>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '40px', marginTop: '40px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '40px', marginTop: '60px' }}>
                         <div>
-                            <h4 style={{ color: '#34d399' }}>1. The Habit of Discipline</h4>
-                            <p style={{ fontSize: '0.9rem' }}>
-                                The biggest advantage of a SIP is automation. By investing AED 500 or AED 1,000 every month, 
-                                you build a long-term habit that generates significant wealth without requiring constant market monitoring.
+                            <h4 style={{ color: '#34d399' }}>1. Compounding: The 8th Wonder</h4>
+                            <p style={{ fontSize: '0.95rem', color: '#94a3b8' }}>
+                                Compounding occurs when the returns on your investment start earning their own returns. Over 10-15 years, 
+                                the "Wealth Gained" portion of our chart will eventually exceed your "Invested Principal." This exponential 
+                                growth is the secret behind the success of the world's most famous investors.
                             </p>
                         </div>
                         <div>
                             <h4 style={{ color: '#34d399' }}>2. Rupee/Dirham Cost Averaging</h4>
-                            <p style={{ fontSize: '0.9rem' }}>
-                                SIPs protect you from market volatility. You buy more units when prices are low and fewer units 
-                                when prices are high. Over several years, this reduces the average cost of your investment.
+                            <p style={{ fontSize: '0.95rem', color: '#94a3b8' }}>
+                                Market volatility is often scary for new investors. SIP removes this fear. By investing a fixed amount 
+                                every month, you automatically buy more units when the market is low and fewer units when it is high. 
+                                Over time, this "averages out" the cost, often providing better returns than trying to time the market.
                             </p>
                         </div>
                         <div>
-                            <h4 style={{ color: '#34d399' }}>3. The Snowball Effect</h4>
-                            <p style={{ fontSize: '0.9rem' }}>
-                                Compounding is the "8th wonder of the world." Small, consistent contributions start earning returns, 
-                                and those returns earn more returns, causing your wealth to accelerate rapidly in the later years.
+                            <h4 style={{ color: '#34d399' }}>3. Professional Discipline</h4>
+                            <p style={{ fontSize: '0.95rem', color: '#94a3b8' }}>
+                                SIP automates your financial goals. Whether you are planning for a new home in the UAE, a child's 
+                                education, or a stress-free retirement, setting a recurring payment ensures your future is funded 
+                                before you spend your monthly salary on lifestyle expenses.
                             </p>
                         </div>
                     </div>
 
-                    <h3 style={{ color: '#38bdf8', marginTop: '40px' }}>Secure & Private Financial Planning</h3>
+                    <h3 style={{ color: '#fff', marginTop: '60px', fontSize: '1.5rem' }}>Strategies to Maximize Your Portfolio</h3>
+                    <p>To get the most out of your SIP, consider these three professional strategies:</p>
+                    <ul style={{ paddingLeft: '20px', marginTop: '20px' }}>
+                        <li style={{ marginBottom: '20px' }}>
+                            <strong>The "Top-Up" Strategy:</strong> As your income increases, increase your SIP amount. Even a 
+                            10% annual increase in your SIP can double your final corpus.
+                        </li>
+                        <li style={{ marginBottom: '20px' }}>
+                            <strong>Longer Horizons:</strong> Doubling your investment duration from 10 to 20 years doesn't 
+                            just double your money—due to compounding, it can quadruple or quintuple the final result.
+                        </li>
+                        <li style={{ marginBottom: '20px' }}>
+                            <strong>Start Early:</strong> A person starting a SIP at age 25 will have significantly more wealth 
+                            by age 50 than someone starting at age 35, even if the second person invests double the amount.
+                        </li>
+                    </ul>
+
+                    <h3 style={{ color: '#fff', marginTop: '60px', fontSize: '1.5rem' }}>Privacy & Security Guarantee</h3>
                     <p>
-                        Our SIP planner provides a complete visual breakdown. pie charts allow you to see the balance between 
-                        Invested Amount and Estimated Returns. All logic is executed <strong>locally in your browser</strong>. 
-                        Your financial goals are never saved to any database, ensuring your privacy remains 100% intact.
+                        At <strong>SHB ToolBox</strong>, we value your financial privacy. Unlike many apps that require 
+                        registration to see your results, our calculator works <strong>100% locally in your browser</strong>. 
+                        Your monthly investment amounts, interest rates, and wealth data are never transmitted to our servers 
+                        or saved in a database. You can plan your entire financial future in complete anonymity.
                     </p>
                 </div>
             </div>
@@ -155,7 +196,8 @@ export default function SIPCalculator() {
     );
 }
 
-const inputGroup = { marginBottom: '20px' };
-const labelStyle = { color: '#94a3b8', fontSize: '0.85rem', display: 'block', marginBottom: '8px' };
-const inputStyle = { width: '100%', background: '#0f172a', border: '1px solid #334155', padding: '12px', borderRadius: '10px', color: '#fff', outline: 'none' };
-const statItem = { background: '#0f172a', padding: '15px', borderRadius: '12px', border: '1px solid #334155' };
+// Styling Constants
+const inputGroup = { marginBottom: '25px' };
+const labelStyle = { color: '#94a3b8', fontSize: '0.85rem', display: 'block', marginBottom: '10px', fontWeight: 'bold' };
+const inputStyle = { width: '100%', background: '#0f172a', border: '1px solid #334155', padding: '15px', borderRadius: '12px', color: '#fff', fontSize: '1.1rem', outline: 'none' };
+const statItem = { background: '#0f172a', padding: '20px', borderRadius: '16px', border: '1px solid #334155' };
