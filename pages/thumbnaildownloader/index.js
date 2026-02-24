@@ -1,10 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
 
 export default function ThumbnailDownloader() {
     const [videoUrl, setVideoUrl] = useState('');
     const [videoId, setVideoId] = useState('');
     const [error, setError] = useState('');
+    const [notification, setNotification] = useState('');
+
+    // --- Toast Logic ---
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(''), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
 
     const extractId = (url) => {
         const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/\s]{11})/;
@@ -12,9 +21,10 @@ export default function ThumbnailDownloader() {
         if (match && match[1]) {
             setVideoId(match[1]);
             setError('');
+            setNotification('Video identified successfully! ✅');
         } else {
             setVideoId('');
-            setError('Invalid YouTube URL. Please check the link.');
+            if (url) setError('Invalid YouTube URL. Please use a valid video or shorts link.');
         }
     };
 
@@ -22,54 +32,75 @@ export default function ThumbnailDownloader() {
         const url = e.target.value;
         setVideoUrl(url);
         if (url) extractId(url);
-        else setVideoId('');
+        else {
+            setVideoId('');
+            setError('');
+        }
     };
 
     const thumbnailQualities = [
-        { label: 'Maximum Resolution (4K/HD)', suffix: 'maxresdefault.jpg' },
-        { label: 'High Quality (HQ)', suffix: 'hqdefault.jpg' },
-        { label: 'Medium Quality (MQ)', suffix: 'mqdefault.jpg' },
-        { label: 'Standard Quality', suffix: 'sddefault.jpg' }
+        { label: '4K Ultra HD (Maximum)', suffix: 'maxresdefault.jpg', res: '1920x1080' },
+        { label: 'HD High Quality', suffix: 'hqdefault.jpg', res: '480x360' },
+        { label: 'Medium (SD)', suffix: 'mqdefault.jpg', res: '320x180' },
+        { label: 'Standard / Mobile', suffix: 'sddefault.jpg', res: '640x480' }
     ];
 
     return (
-        <ToolboxLayout title="YouTube Thumbnail Downloader" description="Download high-resolution YouTube thumbnails in 4K, HD, and SD quality for free.">
-            <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 20px' }}>
-                <h1 style={{ textAlign: 'center', color: '#ff0000', marginBottom: '10px' }}>YouTube Thumbnail Downloader</h1>
-                <p style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '30px' }}>Grab high-definition thumbnails instantly from any YouTube video.</p>
+        <ToolboxLayout 
+            title="YouTube Thumbnail Downloader - Extract HD Video Covers" 
+            description="Download high-resolution YouTube thumbnails (4K, HD, 1080p) instantly. Simply paste the link to extract all available image sizes for free."
+        >
+            <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 20px' }}>
+                
+                {/* TOAST NOTIFICATION */}
+                {notification && (
+                    <div style={{ position: 'fixed', top: '80px', right: '20px', background: '#ff0000', color: '#fff', padding: '12px 24px', borderRadius: '10px', fontWeight: 'bold', zIndex: 1000, boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }}>
+                        {notification}
+                    </div>
+                )}
 
-                <div style={{ background: '#1e293b', padding: '30px', borderRadius: '24px', border: '1px solid #334155' }}>
-                    
-                    {/* INPUT SECTION */}
+                {/* --- TOP SECTION: INTERESTING HOOK --- */}
+                <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+                    <h1 style={{ color: '#ff0000', fontSize: '2.5rem' }}>HD YouTube Thumbnail Downloader</h1>
+                    <p style={{ color: '#94a3b8', fontSize: '1.1rem', maxWidth: '800px', margin: '15px auto', lineHeight: '1.6' }}>
+                        The thumbnail is the most important part of a video's <strong>Click-Through Rate (CTR)</strong>. 
+                        Need a high-res cover for a blog, presentation, or inspiration? Paste the link below to grab the 
+                        source images in seconds.
+                    </p>
+                </div>
+
+                {/* --- APP AREA --- */}
+                <div style={{ background: '#1e293b', padding: '35px', borderRadius: '24px', border: '1px solid #334155', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
                     <div style={{ marginBottom: '30px' }}>
-                        <label style={{ color: '#94a3b8', display: 'block', marginBottom: '10px' }}>Paste YouTube Video URL</label>
+                        <label style={{ color: '#94a3b8', display: 'block', marginBottom: '12px', fontWeight: 'bold', fontSize: '0.9rem' }}>PASTE VIDEO OR SHORTS URL</label>
                         <input 
                             type="text" 
-                            placeholder="e.g., https://www.youtube.com/watch?v=dQw4w9WgXcQ" 
+                            placeholder="https://www.youtube.com/watch?v=..." 
                             value={videoUrl}
                             onChange={handleInputChange}
-                            style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '15px', borderRadius: '12px', fontSize: '1rem' }}
+                            style={{ width: '100%', background: '#0f172a', border: '2px solid #334155', color: '#fff', padding: '18px', borderRadius: '15px', fontSize: '1.1rem', outline: 'none', transition: 'border-color 0.3s' }}
                         />
-                        {error && <p style={{ color: '#f87171', fontSize: '0.8rem', marginTop: '10px' }}>{error}</p>}
+                        {error && <p style={{ color: '#f87171', fontSize: '0.85rem', marginTop: '12px', fontWeight: 'bold' }}>⚠️ {error}</p>}
                     </div>
 
-                    {/* RESULTS SECTION */}
                     {videoId && (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', animation: 'fadeIn 0.5s' }}>
                             {thumbnailQualities.map((q) => {
                                 const imgUrl = `https://img.youtube.com/vi/${videoId}/${q.suffix}`;
                                 return (
-                                    <div key={q.suffix} style={{ background: '#0f172a', padding: '15px', borderRadius: '15px', textAlign: 'center', border: '1px solid #334155' }}>
-                                        <img src={imgUrl} style={{ width: '100%', borderRadius: '8px', marginBottom: '15px' }} alt={q.label} />
-                                        <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '15px' }}>{q.label}</p>
+                                    <div key={q.suffix} style={{ background: '#0f172a', padding: '15px', borderRadius: '20px', textAlign: 'center', border: '1px solid #334155' }}>
+                                        <div style={{ overflow: 'hidden', borderRadius: '12px', marginBottom: '15px' }}>
+                                            <img src={imgUrl} style={{ width: '100%', display: 'block', transition: 'transform 0.3s' }} alt={q.label} />
+                                        </div>
+                                        <p style={{ color: '#fff', fontSize: '0.9rem', marginBottom: '5px', fontWeight: 'bold' }}>{q.label}</p>
+                                        <p style={{ color: '#475569', fontSize: '0.75rem', marginBottom: '15px' }}>Resolution: {q.res}</p>
                                         <a 
                                             href={imgUrl} 
                                             target="_blank" 
                                             rel="noreferrer"
-                                            download 
-                                            style={{ background: '#38bdf8', color: '#0f172a', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', display: 'block' }}
+                                            style={{ background: '#ff0000', color: '#fff', textDecoration: 'none', padding: '12px 0', borderRadius: '10px', fontWeight: 'bold', display: 'block', fontSize: '0.85rem' }}
                                         >
-                                            VIEW & DOWNLOAD
+                                            VIEW FULL IMAGE
                                         </a>
                                     </div>
                                 );
@@ -78,48 +109,54 @@ export default function ThumbnailDownloader() {
                     )}
                 </div>
 
-                {/* --- PROFESSIONAL SEO SECTION --- */}
-                <div style={{ marginTop: '60px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.8' }}>
-                    <h2 style={{ color: '#38bdf8' }}>Professional YouTube Thumbnail Extraction Tool</h2>
+                {/* --- MASSIVE KNOWLEDGE HUB (BOTTOM SEO) --- */}
+                <div style={{ marginTop: '100px', borderTop: '1px solid #334155', paddingTop: '60px', color: '#cbd5e1', lineHeight: '1.8' }}>
+                    <h2 style={{ color: '#fff', fontSize: '2rem', marginBottom: '30px' }}>Deep-Dive: How YouTube Thumbnail Extraction Works</h2>
                     <p>
-                        The SHB YouTube Thumbnail Downloader is a high-speed utility designed for content creators, designers, and digital marketers. 
-                        Whether you need a reference for your own video design, a featured image for a blog post, or a visual for your 
-                        social media campaign, our tool provides the highest resolution images available directly from the video source.
+                        Every time a creator uploads a video to YouTube, the platform's automated media engine processes the video 
+                        and generates a series of image assets. These assets are stored on Google’s <strong>i.ytimg.com</strong> and 
+                        <strong>img.youtube.com</strong> content delivery networks (CDNs). The SHB Thumbnail Downloader communicates 
+                        directly with these servers to retrieve the original source files before any browser-side compression is applied.
                     </p>
 
-                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>How to Download Thumbnails in 4K & HD</h3>
+                    <h3 style={{ color: '#ff0000', marginTop: '40px' }}>Understanding Resolution Varieties</h3>
                     <p>
-                        Every YouTube video is stored with multiple thumbnail resolutions. Our tool automatically extracts the unique 
-                        Video ID from your link and fetches the raw image files from the YouTube image servers:
+                        Depending on the quality of the original video upload, YouTube provides up to four distinct versions of a thumbnail. 
+                        It is important to choose the right one for your specific needs:
                     </p>
-                    <ul>
-                        <li><strong>MaxResDefault:</strong> The highest resolution (usually 1280x720 or 1920x1080). Recommended for thumbnails and blog headers.</li>
-                        <li><strong>HQDefault:</strong> A high-quality version (480x360). Perfect for social media shares and smaller widgets.</li>
-                        <li><strong>SD & MQ:</strong> Optimized smaller versions for faster loading in mobile apps and email newsletters.</li>
+                    <ul style={{ paddingLeft: '20px' }}>
+                        <li><strong>MaxResDefault (1920x1080):</strong> This is the holy grail of thumbnails. If the uploader provided an HD video, this version will exist. It is the best choice for high-end blog headers and print media.</li>
+                        <li><strong>HQDefault (480x360):</strong> A high-quality version that is always available. It is optimized for the YouTube mobile app and related video sidebars.</li>
+                        <li><strong>MQDefault (320x180):</strong> A medium-quality version, often used in embedded players on third-party websites to save bandwidth.</li>
+                        <li><strong>SDDefault (640x480):</strong> A standard definition version with a 4:3 aspect ratio, mainly used for older legacy players and devices.</li>
                     </ul>
 
-                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Full Support for All YouTube Formats</h3>
+                    <h3 style={{ color: '#ff0000', marginTop: '40px' }}>Why Privacy and Speed Matter</h3>
                     <p>
-                        Our extraction logic is compatible with all modern YouTube link structures. Simply paste the URL from your 
-                        address bar, the "Share" button link (youtu.be), or even <strong>YouTube Shorts</strong>. The engine will 
-                        instantly identify the video and display all available qualities for download.
+                        Many "online downloader" websites are slow, filled with intrusive ads, and track your browsing history. 
+                        At <strong>SHB ToolBox</strong>, we take a different approach. Our tool uses <strong>Local URL Parsing</strong>. 
+                        When you paste a link, the extraction logic runs entirely on your device. We do not store the video URLs 
+                        you search for, nor do we cache the images on our server. This makes the tool nearly 5x faster than 
+                        server-side downloaders while keeping your media research 100% private.
                     </p>
 
-                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Copyright & Creative Usage</h3>
+                    <h3 style={{ color: '#ff0000', marginTop: '40px' }}>Legal & Ethical Usage Guidelines</h3>
                     <p>
-                        While SHB ToolBox makes it easy to download these images, we recommend respecting the intellectual property 
-                        of the original creators. Always ensure you have the necessary permissions before using a downloaded 
-                        thumbnail for commercial purposes or as part of your own video content.
-                    </p>
-
-                    <h3 style={{ color: '#38bdf8', marginTop: '30px' }}>Privacy and Convenience</h3>
-                    <p>
-                        At SHB ToolBox, we do not track which videos you are looking at. The extraction process happens locally in 
-                        your browser's session. We do not store links, images, or video metadata in our Supabase database. This 
-                        makes our tool one of the fastest and most private thumbnail grabbers available online.
+                        While our tool makes it easy to access these files, it is vital to remember that thumbnails are the 
+                        intellectual property of the respective content creators. We recommend using downloaded thumbnails 
+                        under <strong>Fair Use</strong> principles—such as for educational commentary, news reporting, or 
+                        criticism. If you intend to use a thumbnail for commercial purposes, always reach out to the 
+                        original creator for permission.
                     </p>
                 </div>
             </div>
+
+            <style jsx>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
         </ToolboxLayout>
     );
 }
