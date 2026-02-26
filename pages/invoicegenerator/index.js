@@ -279,6 +279,7 @@ export default function ProfessionalInvoiceSuite() {
 }
 
 // --- Styles ---
+// --- COMPREHENSIVE STYLE DEFINITIONS ---
 const sidebarS = { flex: '1', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '15px' };
 const sidebarCard = { background: '#1e293b', padding: '20px', borderRadius: '15px', border: '1px solid #334155' };
 const cardTitle = { color: '#38bdf8', fontSize: '0.9rem', margin: '0 0 10px 0' };
@@ -296,6 +297,7 @@ const trnInp = { borderBottom: '1px dashed #ccc !important', width: '150px' };
 const mRow = { display: 'flex', justifyContent: 'flex-end', gap: '5px', fontSize: '0.8rem', marginBottom: '3px' };
 const mInp = { width: '95px', textAlign: 'right', borderBottom: '1px solid #eee !important' };
 const tagL = { fontSize: '0.7rem', fontWeight: 'bold', color: '#94a3b8' };
+const tagLabel = { fontSize: '0.7rem', fontWeight: 'bold', color: '#94a3b8' }; // Added for compatibility
 const wordBox = { fontSize: '0.85rem', fontWeight: 'bold', fontStyle: 'italic', borderBottom: '1px solid #eee', padding: '5px 0' };
 const clientT = { fontSize: '1.2rem', fontWeight: 'bold' };
 const tableB = { width: '100%', borderCollapse: 'collapse', marginTop: '15px' };
@@ -306,7 +308,7 @@ const rawI = { fontSize: '0.75rem' };
 const addB = { width: '100%', padding: '10px', background: '#f8fafc', border: '1px dashed #ccc', color: '#94a3b8', cursor: 'pointer', marginTop: '10px', borderRadius:'5px' };
 const delBtn = { border: 'none', background: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1.2rem' };
 const sumR = { display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: '0.85rem' };
-const grandRow = { display: 'flex', justifyContent: 'space-between', padding: '10px', borderTop: '2px solid #000', fontWeight: 'bold', fontSize: '1.2rem', marginTop: '5px' };
+const grandRow = { display: 'flex', justifyContent: 'space-between', padding: '10px', borderTop: '2px solid #000', fontWeight: 'bold', fontSize: '1.2rem', marginTop: '5px', background:'#f8fafc' };
 const notesArea = { width: '100%', height: '60px', background: '#f8fafc', padding: '8px', fontSize: '0.75rem' };
 const pFoot = { marginTop: 'auto', paddingTop: '40px', borderTop: '1px solid #eee' };
 const footInp = { width: '100%', textAlign: 'center', fontSize: '0.9rem', fontWeight: 'bold' };
@@ -316,5 +318,6 @@ const btnExport = { background: '#38bdf8', color: '#0f172a', padding: '10px', bo
 const btnReset = { width: '100%', background: 'none', border: '1px solid #f87171', color: '#f87171', padding: '10px', borderRadius: '10px', fontSize: '0.75rem', cursor: 'pointer', marginTop:'10px' };
 const btnMin = { background: '#334155', color: '#fff', border: 'none', padding: '5px', borderRadius: '5px', fontSize: '0.7rem', cursor: 'pointer' };
 const toastStyle = { position: 'fixed', top: '20px', right: '20px', background: '#34d399', color: '#0f172a', padding: '15px 30px', borderRadius: '12px', fontWeight: 'bold', zIndex: 100000 };
-const seoCont = { marginTop: '80px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#cbd5e1', fontSize: '0.9rem', lineHeight: '1.8' };
 const inpStyle = { width: '100%', background: '#0f172a', border: '1px solid #334155', padding: '10px', borderRadius: '8px', color: '#fff', fontSize: '0.85rem' };
+const inpS = { width: '100%', background: '#0f172a', border: '1px solid #334155', padding: '10px', borderRadius: '8px', color: '#fff', fontSize: '0.85rem' };
+const seoCont = { marginTop: '80px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#cbd5e1', fontSize: '0.9rem', lineHeight: '1.8' };
