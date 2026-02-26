@@ -317,3 +317,4 @@ const btnReset = { width: '100%', background: 'none', border: '1px solid #f87171
 const btnMin = { background: '#334155', color: '#fff', border: 'none', padding: '5px', borderRadius: '5px', fontSize: '0.7rem', cursor: 'pointer' };
 const toastStyle = { position: 'fixed', top: '20px', right: '20px', background: '#34d399', color: '#0f172a', padding: '15px 30px', borderRadius: '12px', fontWeight: 'bold', zIndex: 100000 };
 const seoCont = { marginTop: '80px', borderTop: '1px solid #334155', paddingTop: '40px', color: '#cbd5e1', fontSize: '0.9rem', lineHeight: '1.8' };
+const inpStyle = { width: '100%', background: '#0f172a', border: '1px solid #334155', padding: '10px', borderRadius: '8px', color: '#fff', fontSize: '0.85rem' };
