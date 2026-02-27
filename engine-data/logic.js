@@ -1,8 +1,7 @@
-// pages/invoice-engine/logic.js
 export const JURISDICTIONS = {
-    AE: { name: 'United Arab Emirates', currency: 'AED', taxLabel: 'VAT', taxRate: 5, decimals: 2, major: 'Dirham', minor: 'Fils' },
+    AE: { name: 'UAE', currency: 'AED', taxLabel: 'VAT', taxRate: 5, decimals: 2, major: 'Dirham', minor: 'Fils' },
     OM: { name: 'Oman', currency: 'OMR', taxLabel: 'VAT', taxRate: 5, decimals: 3, major: 'Rial', minor: 'Baisa' },
-    SA: { name: 'Saudi Arabia', currency: 'SAR', taxLabel: 'VAT', taxRate: 15, decimals: 2, major: 'Riyal', minor: 'Halala' },
+    SA: { name: 'KSA', currency: 'SAR', taxLabel: 'VAT', taxRate: 15, decimals: 2, major: 'Riyal', minor: 'Halala' },
     IN: { name: 'India', currency: 'INR', taxLabel: 'GST', taxRate: 18, decimals: 2, major: 'Rupee', minor: 'Paise' }
 };
 
@@ -10,7 +9,6 @@ export const parseFormula = (formula, values) => {
     try {
         let expr = formula;
         Object.keys(values).forEach(k => expr = expr.replace(new RegExp(`\\b${k}\\b`, 'g'), parseFloat(values[k]) || 0));
-        // eslint-disable-next-line no-new-func
         return Function(`'use strict'; return (${expr})`)();
     } catch { return 0; }
 };
