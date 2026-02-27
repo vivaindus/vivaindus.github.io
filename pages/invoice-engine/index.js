@@ -1,167 +1,199 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import Head from 'next/head';
 import ToolboxLayout from '../../components/ToolboxLayout';
 import { styles } from '../../engine-data/styles';
 import { JURISDICTIONS, amountToWords } from '../../engine-data/logic';
-import { supabase } from '../../lib/supabase';
 
-export default function ShbEnterpriseInvoice() {
+export default function InvoiceCreator() {
     const [mounted, setMounted] = useState(false);
     const invoiceRef = useRef(null);
 
-    // --- Enterprise State Management ---
-    const [config, setConfig] = useState({ country: 'AE', theme: '#064e3b', template: 'modern' });
-    const [columns, setColumns] = useState({ hsn: false, discount: true, tax: true, unit: false });
+    // --- State ---
+    const [config, setConfig] = useState({ country: 'AE', taxMode: 'exclusive', theme: '#064e3b', showHSN: false, showDisc: false });
     const [meta, setMeta] = useState({
-        title: 'TAX INVOICE', iNum: 'INV-' + Date.now().toString().slice(-6),
-        date: new Date().toISOString().split('T')[0],
-        sender: 'SHIFA STORES\nDubai, UAE\nTRN: 100XXXXXXXXXXXX',
-        client: 'CLIENT NAME\nAddress\nTRN: 100XXXXXXXXXXXX',
-        notes: 'Thank you for choosing Shifa Stores.',
-        status: 'unpaid'
+        title: 'TAX INVOICE', iNum: 'INV-001', date: new Date().toISOString().split('T')[0],
+        sender: 'YOUR BUSINESS NAME\nAddress Line 1\nTRN/GSTIN: 100XXXXXXXXXXXX',
+        client: 'CLIENT NAME\nBilling Address\nTax ID: 100XXXXXXXXXXXX',
+        notes: 'Payment is due within 15 days.', logo: null, signature: null
     });
-    const [items, setItems] = useState([{ id: 1, name: 'Product Name', qty: 1, rate: 100, disc: 0, tax: 5, hsn: '' }]);
+    const [items, setItems] = useState([{ id: 1, name: '', hsn: '', qty: 1, rate: 0, tax: 5, disc: 0 }]);
+    const [extra, setExtra] = useState({ shipping: 0, rounding: 0 });
 
-    useEffect(() => { setMounted(true); }, []);
+    useEffect(() => {
+        setMounted(true);
+        const saved = localStorage.getItem('shb_invoice_lite_v1');
+        if (saved) {
+            const p = JSON.parse(saved);
+            setConfig(p.config); setMeta(p.meta); setItems(p.items); setExtra(p.extra);
+        }
+    }, []);
 
     // --- Calculation Engine ---
-    const totals = useMemo(() => {
+    const engine = useMemo(() => {
         const jur = JURISDICTIONS[config.country];
         const rows = items.map(item => {
-            const gross = item.qty * item.rate;
-            const discAmt = (gross * item.disc) / 100;
-            const taxable = gross - discAmt;
-            const taxAmt = (taxable * item.tax) / 100;
-            return { ...item, total: taxable + taxAmt, taxAmt, taxable };
+            const lineGross = item.qty * item.rate;
+            const lineDisc = (lineGross * item.disc) / 100;
+            const taxable = lineGross - lineDisc;
+            let taxAmt = 0;
+            if (config.taxMode === 'inclusive') {
+                taxAmt = taxable - (taxable / (1 + item.tax / 100));
+            } else {
+                taxAmt = taxable * (item.tax / 100);
+            }
+            return { ...item, taxable, taxAmt, total: config.taxMode === 'exclusive' ? taxable + taxAmt : taxable };
         });
+
         const subtotal = rows.reduce((a, b) => a + b.taxable, 0);
         const taxTotal = rows.reduce((a, b) => a + b.taxAmt, 0);
-        const grandTotal = subtotal + taxTotal;
-        return { rows, subtotal, taxTotal, grandTotal, jur, words: amountToWords(grandTotal, jur) };
-    }, [items, config]);
+        const grandTotal = subtotal + taxTotal + parseFloat(extra.shipping || 0) + parseFloat(extra.rounding || 0);
 
-    // --- Enterprise Features ---
-    const saveToCloud = async () => {
-        const { error } = await supabase.from('shb_invoices').upsert({
-            invoice_number: meta.iNum,
-            total_amount: totals.grandTotal,
-            status: meta.status,
-            invoice_data: { meta, items, config, columns }
-        });
-        alert(error ? "Error saving" : "Invoice Synced to Cloud! ✅");
+        return { rows, subtotal, taxTotal, grandTotal, jur, words: amountToWords(grandTotal, jur) };
+    }, [items, config, extra]);
+
+    const handleFile = (e, field) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => setMeta({ ...meta, [field]: ev.target.result });
+            reader.readAsDataURL(file);
+        }
     };
 
-    const exportPDF = async () => {
+    const downloadPDF = async () => {
         const { toCanvas } = await import('html-to-image');
         const { jsPDF } = await import('jspdf');
-        const canvas = await toCanvas(invoiceRef.current, { pixelRatio: 3 });
-        const img = canvas.toDataURL('image/png');
+        const canvas = await toCanvas(invoiceRef.current, { pixelRatio: 2.5, backgroundColor: '#fff' });
+        const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
-        pdf.addImage(img, 'PNG', 0, 0, 210, (canvas.height * 210) / canvas.width);
+        const imgH = (canvas.height * 210) / canvas.width;
+        
+        let hLeft = imgH, pos = 0;
+        pdf.addImage(imgData, 'PNG', 0, pos, 210, imgH);
+        hLeft -= 295;
+
+        while (hLeft > 0) {
+            pos = hLeft - imgH;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, pos, 210, imgH);
+            hLeft -= 295;
+        }
         pdf.save(`${meta.iNum}.pdf`);
     };
 
     if (!mounted) return null;
 
     return (
-        <ToolboxLayout title="Enterprise Invoice Suite" description="Complete Billing Management System">
-            <div style={styles.container}>
-                
-                {/* 1. THE SETTINGS SIDEBAR (Refrens Style) */}
+        <ToolboxLayout title="Invoice Creator" description="Professional Print-Ready Invoice Generator">
+            <div style={styles.app}>
                 <aside style={styles.sidebar}>
-                    <h3 style={styles.h3}>Design & Layout</h3>
-                    <label style={styles.lCap}>Primary Theme Color</label>
-                    <input type="color" value={config.theme} onChange={e => setConfig({...config, theme: e.target.value})} style={{width:'100%', height:'40px', border:'none', marginBottom:'20px'}} />
-                    
-                    <h3 style={styles.h3}>Column Configuration</h3>
-                    <div style={styles.toggleGroup}>
-                        <label style={styles.checkLabel}><input type="checkbox" checked={columns.hsn} onChange={e => setColumns({...columns, hsn: e.target.checked})} /> Show HSN/SAC</label>
-                        <label style={styles.checkLabel}><input type="checkbox" checked={columns.discount} onChange={e => setColumns({...columns, discount: e.target.checked})} /> Show Discount</label>
-                        <label style={styles.checkLabel}><input type="checkbox" checked={columns.unit} onChange={e => setColumns({...columns, unit: e.target.checked})} /> Show Units (kg/pcs)</label>
+                    <div style={styles.card}>
+                        <h3 style={styles.h3}>Jurisdiction</h3>
+                        <select style={{width:'100%', padding:'10px', borderRadius:'8px'}} value={config.country} onChange={e => setConfig({...config, country: e.target.value})}>
+                            {Object.keys(JURISDICTIONS).map(k => <option key={k} value={k}>{JURISDICTIONS[k].name}</option>)}
+                        </select>
                     </div>
 
-                    <h3 style={styles.h3}>Jurisdiction</h3>
-                    <select style={styles.sel} value={config.country} onChange={e => setConfig({...config, country: e.target.value})}>
-                        {Object.keys(JURISDICTIONS).map(k => <option key={k} value={k}>{JURISDICTIONS[k].name}</option>)}
-                    </select>
+                    <div style={styles.card}>
+                        <h3 style={styles.h3}>Tax Mode</h3>
+                        <div style={{display:'flex', gap:'5px'}}>
+                            <button style={{...styles.btn, flex:1, background: config.taxMode==='exclusive'?'#38bdf8':'#334155'}} onClick={()=>setConfig({...config, taxMode:'exclusive'})}>Exclusive</button>
+                            <button style={{...styles.btn, flex:1, background: config.taxMode==='inclusive'?'#38bdf8':'#334155'}} onClick={()=>setConfig({...config, taxMode:'inclusive'})}>Inclusive</button>
+                        </div>
+                    </div>
 
-                    <h3 style={styles.h3}>Invoice Status</h3>
-                    <select style={styles.sel} value={meta.status} onChange={e => setMeta({...meta, status: e.target.value})}>
-                        <option value="unpaid">Unpaid / Draft</option>
-                        <option value="paid">Mark as Paid</option>
-                        <option value="overdue">Overdue</option>
-                    </select>
+                    <div style={styles.card}>
+                        <h3 style={styles.h3}>Columns</h3>
+                        <label style={{display:'block', fontSize:'0.8rem', marginBottom:'10px'}}><input type="checkbox" checked={config.showHSN} onChange={e => setConfig({...config, showHSN: e.target.checked})} /> HSN/SAC Column</label>
+                        <label style={{display:'block', fontSize:'0.8rem'}}><input type="checkbox" checked={config.showDisc} onChange={e => setConfig({...config, showDisc: e.target.checked})} /> Discount Column</label>
+                    </div>
 
-                    <button onClick={saveToCloud} style={{width:'100%', padding:'15px', background:'#34d399', border:'none', borderRadius:'8px', color:'#fff', fontWeight:'bold', cursor:'pointer', marginBottom:'10px'}}>SAVE TO CLOUD</button>
-                    <button onClick={exportPDF} style={{width:'100%', padding:'15px', background:config.theme, border:'none', borderRadius:'8px', color:'#fff', fontWeight:'bold', cursor:'pointer'}}>DOWNLOAD PDF</button>
+                    <div style={styles.card}>
+                        <h3 style={styles.h3}>Logo & Signature</h3>
+                        <input type="file" onChange={e => handleFile(e, 'logo')} style={{fontSize:'0.7rem', marginBottom:'10px'}} />
+                        <input type="file" onChange={e => handleFile(e, 'signature')} style={{fontSize:'0.7rem'}} />
+                    </div>
+
+                    <button onClick={() => {localStorage.setItem('shb_invoice_lite_v1', JSON.stringify({config, meta, items, extra})); alert("Draft Saved!")}} style={{...styles.btn, background:'#34d399', color:'#0f172a', marginBottom:'10px'}}>SAVE DRAFT</button>
+                    <button onClick={downloadPDF} style={{...styles.btn, ...styles.btnPrimary}}>DOWNLOAD PDF</button>
+                    <button onClick={() => window.location.reload()} style={{...styles.btn, ...styles.btnReset}}>RESET ALL</button>
                 </aside>
 
-                {/* 2. THE LIVE PREVIEW (Paper) */}
                 <main style={styles.workspace}>
                     <div ref={invoiceRef} style={styles.paper}>
-                        <div style={{position:'absolute', top:0, left:0, width:'100%', height:'8px', background:config.theme}}></div>
-                        
-                        <div style={{display:'flex', justifyContent:'space-between', marginBottom:'40px'}}>
-                            <div style={{flex:1}}>
-                                <input style={{...styles.inlineInput, fontSize:'2.2rem', fontWeight:'900', color:config.theme}} value={meta.title} onChange={e => setMeta({...meta, title: e.target.value})} />
-                                <textarea style={{...styles.inlineInput, height:'100px', marginTop:'15px'}} value={meta.sender} onChange={e => setMeta({...meta, sender: e.target.value})} />
+                        {/* Header */}
+                        <div style={{display:'flex', justifyContent:'space-between', marginBottom:'40px', borderBottom:'2px solid #000', paddingBottom:'20px'}}>
+                            <div style={{flex:1.5}}>
+                                <input style={{...styles.ghostInp, fontSize:'2.2rem', fontWeight:'900'}} value={meta.title} onChange={e => setMeta({...meta, title: e.target.value})} />
+                                <textarea style={styles.areaInp} value={meta.sender} onChange={e => setMeta({...meta, sender: e.target.value})} />
                             </div>
-                            <div style={{textAlign:'right', width:'250px'}}>
-                                <div style={{background:'#f8fafc', height:'100px', border:'1px dashed #cbd5e1', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center'}}>
-                                    <span style={{fontSize:'0.7rem', color:'#94a3b8'}}>Add Brand Logo</span>
-                                </div>
-                                <div style={{marginTop:'20px'}}>
-                                    <div style={{fontSize:'0.8rem'}}>No: <b>{meta.iNum}</b></div>
-                                    <div style={{fontSize:'0.8rem'}}>Date: <b>{meta.date}</b></div>
-                                </div>
+                            <div style={{flex:1, textAlign:'right'}}>
+                                {meta.logo && <img src={meta.logo} style={{maxHeight:'80px', marginBottom:'15px'}} />}
+                                <div style={{fontSize:'0.85rem'}}>No: <input style={{width:'80px', fontWeight:'bold', borderBottom:'1px solid #eee'}} value={meta.iNum} onChange={e => setMeta({...meta, iNum: e.target.value})} /></div>
+                                <div style={{fontSize:'0.85rem'}}>Date: <input type="date" style={{border:'none', background:'none', fontWeight:'bold'}} value={meta.date} onChange={e => setMeta({...meta, date: e.target.value})} /></div>
                             </div>
                         </div>
 
+                        {/* Bill To */}
                         <div style={{marginBottom:'30px'}}>
-                            <span style={styles.lCap}>BILL TO:</span>
-                            <textarea style={{...styles.inlineInput, fontWeight:'bold', fontSize:'1.1rem'}} value={meta.client} onChange={e => setMeta({...meta, client: e.target.value})} />
+                            <p style={{fontSize:'0.7rem', fontWeight:'800', color:'#64748b'}}>BILL TO:</p>
+                            <textarea style={{...styles.areaInp, fontWeight:'bold', fontSize:'1rem'}} value={meta.client} onChange={e => setMeta({...meta, client: e.target.value})} />
                         </div>
 
+                        {/* Table */}
                         <table style={styles.table}>
                             <thead>
                                 <tr>
                                     <th style={styles.th}>DESCRIPTION</th>
-                                    {columns.hsn && <th style={styles.th}>HSN</th>}
+                                    {config.showHSN && <th style={styles.th}>HSN</th>}
                                     <th style={styles.th}>QTY</th>
                                     <th style={styles.th}>RATE</th>
-                                    {columns.discount && <th style={styles.th}>DISC %</th>}
-                                    <th style={{...styles.th, textAlign:'right'}}>AMOUNT</th>
+                                    {config.showDisc && <th style={styles.th}>DISC %</th>}
+                                    <th style={styles.th}>{engine.jur.taxLabel} %</th>
+                                    <th style={{...styles.th, textAlign:'right'}}>TOTAL</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {totals.rows.map((item, idx) => (
+                                {engine.rows.map((item, idx) => (
                                     <tr key={item.id}>
-                                        <td style={styles.td}><input style={styles.inlineInput} value={item.name} onChange={e => {const ni=[...items]; ni[idx].name=e.target.value; setItems(ni);}} /></td>
-                                        {columns.hsn && <td style={styles.td}><input style={styles.inlineInput} value={item.hsn} onChange={e => {const ni=[...items]; ni[idx].hsn=e.target.value; setItems(ni);}} /></td>}
-                                        <td style={styles.td}><input type="number" style={styles.inlineInput} value={item.qty} onChange={e => {const ni=[...items]; ni[idx].qty=e.target.value; setItems(ni);}} /></td>
-                                        <td style={styles.td}><input type="number" style={styles.inlineInput} value={item.rate} onChange={e => {const ni=[...items]; ni[idx].rate=e.target.value; setItems(ni);}} /></td>
-                                        {columns.discount && <td style={styles.td}><input type="number" style={styles.inlineInput} value={item.disc} onChange={e => {const ni=[...items]; ni[idx].disc=e.target.value; setItems(ni);}} /></td>}
-                                        <td style={{...styles.td, textAlign:'right', fontWeight:'bold'}}>{item.total.toFixed(totals.jur.decimals)}</td>
+                                        <td style={styles.td}><input style={styles.ghostInp} value={item.name} onChange={e => {const ni=[...items]; ni[idx].name=e.target.value; setItems(ni);}} placeholder="Item name" /></td>
+                                        {config.showHSN && <td style={styles.td}><input style={styles.ghostInp} value={item.hsn} onChange={e => {const ni=[...items]; ni[idx].hsn=e.target.value; setItems(ni);}} /></td>}
+                                        <td style={styles.td}><input type="number" style={styles.ghostInp} value={item.qty} onChange={e => {const ni=[...items]; ni[idx].qty=e.target.value; setItems(ni);}} /></td>
+                                        <td style={styles.td}><input type="number" style={styles.ghostInp} value={item.rate} onChange={e => {const ni=[...items]; ni[idx].rate=e.target.value; setItems(ni);}} /></td>
+                                        {config.showDisc && <td style={styles.td}><input type="number" style={styles.ghostInp} value={item.disc} onChange={e => {const ni=[...items]; ni[idx].disc=e.target.value; setItems(ni);}} /></td>}
+                                        <td style={styles.td}><input type="number" style={styles.ghostInp} value={item.tax} onChange={e => {const ni=[...items]; ni[idx].tax=e.target.value; setItems(ni);}} /></td>
+                                        <td style={{...styles.td, textAlign:'right', fontWeight:'bold'}}>{item.total.toFixed(engine.jur.decimals)}</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
-                        <button onClick={() => setItems([...items, {id: Date.now(), name:'', qty:1, rate:0, disc:0, tax: totals.jur.taxRate}])} style={{background:'none', border:'1px dashed #ccc', width:'100%', padding:'10px', cursor:'pointer', marginTop:'10px', color:'#94a3b8'}}>+ Add New Line</button>
+                        <button onClick={() => setItems([...items, {id: Date.now(), name:'', hsn:'', qty:1, rate:0, tax:5, disc:0}])} style={{width:'100%', padding:'10px', background:'none', border:'1px dashed #ccc', marginTop:'10px', cursor:'pointer', color:'#94a3b8'}}>+ Add Line</button>
 
-                        <div style={styles.totalsArea}>
-                            <div style={styles.totalsTable}>
-                                <div style={styles.totalRow}><span>Subtotal</span><span>{totals.subtotal.toFixed(totals.jur.decimals)}</span></div>
-                                <div style={styles.totalRow}><span>{totals.jur.taxLabel} Total</span><span>{totals.taxTotal.toFixed(totals.jur.decimals)}</span></div>
-                                <div style={styles.grandTotal}><span>GRAND TOTAL</span><span>{totals.jur.currency} {totals.grandTotal.toFixed(totals.jur.decimals)}</span></div>
+                        {/* Totals */}
+                        <div style={{display:'flex', justifyContent:'space-between', marginTop:'40px', breakInside:'avoid'}}>
+                            <div style={{width:'55%'}}>
+                                <p style={{fontSize:'0.7rem', fontWeight:'800', color:'#64748b'}}>TOTAL IN WORDS:</p>
+                                <p style={{fontWeight:'bold', fontSize:'0.9rem'}}>{engine.words}</p>
+                                <div style={{marginTop:'30px'}}>
+                                    <p style={{fontSize:'0.7rem', fontWeight:'800', color:'#64748b'}}>NOTES & TERMS:</p>
+                                    <textarea style={styles.areaInp} value={meta.notes} onChange={e => setMeta({...meta, notes: e.target.value})} />
+                                </div>
                             </div>
-                        </div>
-
-                        <div style={{marginTop:'40px'}}>
-                            <span style={styles.lCap}>AMOUNT IN WORDS:</span>
-                            <p style={{fontWeight:'bold', color:config.theme}}>{totals.words}</p>
+                            <div style={{width:'260px'}}>
+                                <div style={styles.totalRow}><span>Subtotal</span><span>{engine.subtotal.toFixed(engine.jur.decimals)}</span></div>
+                                <div style={styles.totalRow}><span>Tax Total</span><span>{engine.taxTotal.toFixed(engine.jur.decimals)}</span></div>
+                                <div style={styles.totalRow}><span>Shipping</span><input type="number" value={extra.shipping} onChange={e => setExtra({...extra, shipping: e.target.value})} style={{width:'80px', textAlign:'right', borderBottom:'1px solid #eee'}} /></div>
+                                <div style={styles.grandRow}><span>TOTAL</span><span>{engine.jur.currency} {engine.grandTotal.toFixed(engine.jur.decimals)}</span></div>
+                                {meta.signature && <div style={{textAlign:'right', marginTop:'20px'}}><img src={meta.signature} style={{maxHeight:'60px'}} /><p style={{fontSize:'0.6rem', fontWeight:'bold'}}>Authorized Signatory</p></div>}
+                            </div>
                         </div>
                     </div>
                 </main>
             </div>
+            <style jsx>{`
+                @media print { :global(.no-print) { display: none !important; } }
+                input:hover, textarea:hover { background: rgba(56, 189, 248, 0.05); }
+            `}</style>
         </ToolboxLayout>
     );
 }
