@@ -23,7 +23,12 @@ export const styles = {
     tdS: { padding: '10px 8px', borderBottom: '1px solid #f1f5f9' },
     rawI: { fontSize: '0.85rem', width: '100%', border: 'none', outline: 'none', background: 'transparent' },
     addB: { width: '100%', padding: '10px', background: '#f8fafc', border: '1px dashed #ccc', cursor: 'pointer', marginTop: '15px', color: '#94a3b8', fontSize: '0.7rem' },
-    delBtn: { border: 'none', background: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1.2rem' },
     sumR: { display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: '0.85rem' },
     toastS: { position: 'fixed', top: '20px', right: '20px', background: '#34d399', color: '#0f172a', padding: '15px 30px', borderRadius: '12px', fontWeight: 'bold', zIndex: 100000 },
+    colList: { background: '#0f172a', padding: '15px', borderRadius: '15px' },
+    colItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '8px', borderBottom: '1px solid #1e293b', paddingBottom: '8px' },
+    ghB: { background: 'none', border: 'none', color: '#38bdf8', cursor: 'pointer', fontSize: '0.7rem' },
+    ghI: { background: 'none', border: '1px solid #334155', color: '#fff', fontSize: '0.7rem', padding: '5px', borderRadius: '4px' },
+    chargeItem: { display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'center' },
+    searchI: { background: '#f8fafc', border: '1px solid #e2e8f0', padding: '15px', borderRadius: '12px', width: '100%', fontSize: '0.8rem', color: '#000', marginBottom: '15px' },
 };
