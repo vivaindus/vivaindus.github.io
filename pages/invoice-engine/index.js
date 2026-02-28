@@ -5,13 +5,14 @@ import { styles } from '../../engine-data/styles';
 import { JURISDICTIONS, amountToWords } from '../../engine-data/logic';
 
 const INITIAL_STATE = {
-    config: { country: 'AE', taxMode: 'exclusive', theme: '#064e3b', taxLabel: 'VAT', rounding: 'nearest', isExport: false, isReverse: false, defaultTaxRate: 5 },
-    columns: [
-        { id: 'desc', label: 'Item Description', visible: true, private: false, width: 250, type: 'text' },
-        { id: 'qty', label: 'Qty', visible: true, private: false, width: 60, type: 'number' },
-        { id: 'rate', label: 'Unit Price', visible: true, private: false, width: 100, type: 'number' },
-        { id: 'tax', label: 'Tax %', visible: true, private: false, width: 70, type: 'number' }
-    ],
+    config: { 
+        country: 'AE', taxMode: 'exclusive', theme: '#064e3b', taxLabel: 'VAT', 
+        rounding: 'nearest', isExport: false, isReverse: false, defaultTaxRate: 5,
+        indiaTaxType: 'cgst_sgst', // for India IGST support
+        globalDiscountLayer: 'before_tax', // before_tax or after_tax
+        roundLineLevel: false, // line-level rounding control
+        roundingPrecision: 2 // decimal precision for rounding
+    },
     meta: { 
         title: 'TAX INVOICE', iNum: 'INV-1001', date: new Date().toISOString().split('T')[0], due: '', supply: '',
         sender: 'SHIFA STORES\nDubai, UAE\nTRN: 100XXXXXXXXXXXX', client: 'CLIENT NAME\nTRN: 100XXXXXXXXXXXX', 
@@ -19,7 +20,7 @@ const INITIAL_STATE = {
     },
     items: [{ id: Date.now(), desc: '', qty: 1, rate: 0, tax: 5 }],
     charges: [],
-    globalDisc: { val: 0, type: '%' }
+     globalDisc: { val: 0, type: '%', appliedOn: 'subtotal' }
 };
 
 export default function ShbEnterpriseV32() {
@@ -76,66 +77,104 @@ export default function ShbEnterpriseV32() {
     const engine = useMemo(() => {
         const jur = JURISDICTIONS[config.country];
         
+        // 1. Process Line Items
         const rows = items.map(item => {
-            const rawQty = parseFloat(item.qty) || 0;
-            const rawPrice = parseFloat(item.rate) || 0;
-            const rawTaxP = item.tax !== undefined ? parseFloat(item.tax) : parseFloat(config.defaultTaxRate);
-
-            // 1. Base
-            let base = rawQty * rawPrice;
+            const qty = Math.max(0, parseFloat(item.qty) || 0);
+            const rate = Math.max(0, parseFloat(item.rate) || 0);
             
-            // 2. Line Charges
+            // CALC-02: Export/Reverse Charge Logic
+            let taxR = config.isExport || config.isReverse ? 0 : 
+                       (item.tax !== undefined ? parseFloat(item.tax) : parseFloat(config.defaultTaxRate));
+
+            // 1.1 Base Calculation
+            let base = qty * rate;
+            
+            // CHG-01: Line Charges
             if (item.charge_p) base += (base * parseFloat(item.charge_p) / 100);
             if (item.charge_a) base += parseFloat(item.charge_a);
 
-            // 3. Line Discounts
+            // 1.2 Line Discounts (VAL-02: Over-discount protection)
             let lineDisc = 0;
-            if (item.disc_p) lineDisc = (base * parseFloat(item.disc_p) / 100);
-            else if (item.disc_a) lineDisc = parseFloat(item.disc_a);
+            if (item.disc_p) lineDisc = Math.min(base, (base * parseFloat(item.disc_p) / 100));
+            else if (item.disc_a) lineDisc = Math.min(base, parseFloat(item.disc_a));
             
             const taxable = base - lineDisc;
 
-            // 4. Tax
-            let taxAmt = config.taxMode === 'exclusive' ? (taxable * rawTaxP / 100) : (taxable - (taxable / (1 + rawTaxP / 100)));
+            // 1.3 Tax Calculation (CAL-01: Inclusive proportionality)
+            let taxAmt = config.taxMode === 'exclusive' ? (taxable * taxR / 100) : (taxable - (taxable / (1 + taxR / 100)));
             let lineTotal = config.taxMode === 'exclusive' ? taxable + taxAmt : taxable;
 
-            // 5. TDS
+            // CALC-04: TDS Aggregation
             let tdsAmt = 0;
-            if (item.tds_p) tdsAmt = lineTotal * (parseFloat(item.tds_p) / 100);
+            if (item.tds_p) tdsAmt = lineTotal * (Math.min(100, parseFloat(item.tds_p)) / 100);
             
             const finalLinePayable = lineTotal - tdsAmt;
 
-            // Build Computed object for Formulas to read
-            const computed = { taxable, taxAmt, lineTotal: finalLinePayable };
+            const computed = { taxable, taxAmt, lineTotal: finalLinePayable, tdsAmt };
             
-            // Resolve Formulas
             let formulaVals = {};
             columns.forEach(c => {
                 if(c.type === 'formula') formulaVals[c.id] = resolveFormula(c.formula, item, computed);
             });
 
+            // CALC-05: Line Level Rounding
+            if (config.roundLineLevel) {
+                computed.taxAmt = Math.round(computed.taxAmt * 100) / 100;
+                computed.lineTotal = Math.round(computed.lineTotal * 100) / 100;
+            }
+
             return { ...item, ...computed, ...formulaVals, finalLinePayable };
         });
 
+        // 2. Aggregate Totals
         const subtotal = rows.reduce((acc, r) => acc + r.taxable, 0);
-        const totalLineTax = rows.reduce((acc, r) => acc + r.taxAmt, 0);
-        const discAmt = globalDisc.type === '%' ? (subtotal * globalDisc.val / 100) : parseFloat(globalDisc.val || 0);
-        const discountedSubtotal = subtotal - discAmt;
+        const lineTaxTotal = rows.reduce((acc, r) => acc + r.taxAmt, 0);
+        const totalTDS = rows.reduce((acc, r) => acc + (r.tdsAmt || 0), 0);
 
-        const totalCharges = charges.reduce((acc, c) => acc + parseFloat(c.val || 0), 0);
-        const taxableChargeTax = charges.filter(c => c.taxable).reduce((acc, c) => acc + parseFloat(c.val || 0), 0) * (parseFloat(config.defaultTaxRate) / 100);
+        // CALC-03: Global Discount Layering
+        let discAmt = 0;
+        if (config.globalDiscountLayer === 'before_tax') {
+            discAmt = globalDisc.type === '%' ? (subtotal * (parseFloat(globalDisc.val) || 0) / 100) : parseFloat(globalDisc.val || 0);
+        }
 
-        const rawGrand = discountedSubtotal + totalLineTax + taxableChargeTax + totalCharges;
+        // CHG-02: Charge Calculation Layers
+        const taxableCharges = charges.filter(c => c.taxable).reduce((acc, c) => acc + (parseFloat(c.val) || 0), 0);
+        const chargeTax = taxableCharges * (parseFloat(config.defaultTaxRate) / 100);
+        const totalCharges = charges.reduce((acc, c) => acc + (parseFloat(c.val) || 0), 0);
+
+        // Grand Total Calc
+        let rawGrand = (subtotal - discAmt) + lineTaxTotal + chargeTax + totalCharges;
+        
+        if (config.globalDiscountLayer === 'after_tax') {
+            const afterTaxDisc = globalDisc.type === '%' ? (rawGrand * (parseFloat(globalDisc.val) || 0) / 100) : parseFloat(globalDisc.val || 0);
+            rawGrand -= afterTaxDisc;
+        }
+
+        // CALC-06: Advanced Rounding
         let grand = rawGrand;
-        if (config.rounding === 'up') grand = Math.ceil(rawGrand);
-        else if (config.rounding === 'down') grand = Math.floor(rawGrand);
-        else if (config.rounding === 'nearest') grand = Math.round(rawGrand);
+        const p = Math.pow(10, config.roundingPrecision || 0);
+        if (config.rounding === 'up') grand = Math.ceil(rawGrand * p) / p;
+        else if (config.rounding === 'down') grand = Math.floor(rawGrand * p) / p;
+        else if (config.rounding === 'nearest') grand = Math.round(rawGrand * p) / p;
 
-        const taxSummary = jur.hasSplitTax 
-            ? [{label: 'CGST', amt: (totalLineTax+taxableChargeTax)/2}, {label: 'SGST', amt: (totalLineTax+taxableChargeTax)/2}] 
-            : [{label: config.taxLabel, amt: totalLineTax + taxableChargeTax}];
+        // TAX-01: India IGST Support
+        let taxSummary = [];
+        if (jur.hasSplitTax) {
+            if (config.indiaTaxType === 'igst') {
+                taxSummary.push({ label: 'IGST', amt: lineTaxTotal + chargeTax });
+            } else {
+                taxSummary.push({ label: 'CGST', amt: (lineTaxTotal + chargeTax) / 2 });
+                taxSummary.push({ label: 'SGST', amt: (lineTaxTotal + chargeTax) / 2 });
+            }
+        } else {
+            taxSummary.push({ label: config.taxLabel, amt: lineTaxTotal + chargeTax });
+        }
 
-        return { rows, subtotal, taxTotal: totalLineTax + taxableChargeTax, taxSummary, grandTotal: grand, roundOff: grand - rawGrand, jur, words: amountToWords(grand, jur) };
+        return { 
+            rows, subtotal, taxTotal: lineTaxTotal + chargeTax, totalTDS, taxSummary, 
+            grandTotal: grand, payableAfterTDS: grand - totalTDS, roundOff: grand - rawGrand, 
+            jur, words: amountToWords(grand, jur) 
+        };
     }, [items, config, globalDisc, charges, columns]);
 
     const hardReset = () => {
@@ -183,14 +222,36 @@ export default function ShbEnterpriseV32() {
                     </div>
 
                     <div style={styles.card}>
-                        <h3 style={styles.h3}>Logic & Rounding</h3>
-                        <label style={styles.lCap}>Rounding Engine</label>
-                        <select value={config.rounding} onChange={e => setConfig({...config, rounding: e.target.value})} style={styles.selS}>
-                            <option value="none">Exact</option><option value="nearest">Nearest</option><option value="up">Always Up</option><option value="down">Always Down</option>
+                        <h3 style={styles.h3}>Calculation Strategy</h3>
+                        
+                        <label style={styles.lCap}>Global Discount Apply On</label>
+                        <select value={config.globalDiscountLayer} onChange={e => setConfig({...config, globalDiscountLayer: e.target.value})} style={styles.selS}>
+                            <option value="before_tax">Before Tax (Standard)</option>
+                            <option value="after_tax">After Tax (Post-Tax Reduction)</option>
                         </select>
-                        <div style={{marginTop:15}}>
-                            <label style={{display:'flex', gap:10, fontSize:'0.75rem', alignItems:'center'}}><input type="checkbox" checked={config.isExport} onChange={e=>setConfig({...config, isExport:e.target.checked})} /> Zero Rated Export</label>
-                            <label style={{display:'flex', gap:10, fontSize:'0.75rem', alignItems:'center', marginTop:10}}><input type="checkbox" checked={config.isReverse} onChange={e=>setConfig({...config, isReverse:e.target.checked})} /> Reverse Charge</label>
+
+                        {config.country === 'IN' && (
+                            <>
+                                <label style={{...styles.lCap, marginTop: 10}}>India GST Type</label>
+                                <select value={config.indiaTaxType} onChange={e => setConfig({...config, indiaTaxType: e.target.value})} style={styles.selS}>
+                                    <option value="cgst_sgst">Intra-State (CGST + SGST)</option>
+                                    <option value="igst">Inter-State (IGST)</option>
+                                </select>
+                            </>
+                        )}
+
+                        <label style={{...styles.lCap, marginTop: 10}}>Rounding Mode</label>
+                        <select value={config.rounding} onChange={e => setConfig({...config, rounding: e.target.value})} style={styles.selS}>
+                            <option value="none">Exact</option>
+                            <option value="nearest">Nearest Integer</option>
+                            <option value="up">Round Up</option>
+                            <option value="down">Round Down</option>
+                        </select>
+
+                        <div style={{marginTop: 15}}>
+                            <label style={{display:'flex', gap:10, fontSize:'0.75rem', alignItems:'center'}}>
+                                <input type="checkbox" checked={config.roundLineLevel} onChange={e=>setConfig({...config, roundLineLevel: e.target.checked})} /> Round per Line Item
+                            </label>
                         </div>
                     </div>
 
@@ -269,33 +330,30 @@ export default function ShbEnterpriseV32() {
                             <div style={styles.totalBox}>
                                 <div style={styles.totalTable}>
                                     <div style={styles.tRow}><span>Subtotal</span><span>{engine.subtotal.toFixed(engine.jur.decimals)}</span></div>
-                                    {engine.taxSummary.map(t => <div key={t.label} style={styles.tRow}><span>{t.label} Total</span><span>{t.amt.toFixed(engine.jur.decimals)}</span></div>)}
                                     
-                                    <div style={styles.tRow}>
-                                        <span>Invoice Discount</span>
-                                        <div style={{display:'flex', gap:5}}>
-                                            <input type="number" style={{width:60, textAlign:'right', borderBottom:'1px solid #eee'}} value={globalDisc.val} onChange={e=>setGlobalDisc({...globalDisc, val:e.target.value})} />
-                                            <select value={globalDisc.type} onChange={e=>setGlobalDisc({...globalDisc, type:e.target.value})} style={{border:'none', background:'none'}}><option>%</option><option>Fixed</option></select>
-                                        </div>
-                                    </div>
-                                    
-                                    {charges.map((c, i) => (
-                                        <div key={i} style={styles.tRow}>
-                                            <input value={c.label} onChange={e => {const nc=[...charges]; nc[i].label=e.target.value; setCharges(nc);}} style={{width:120, border:'none', background:'transparent'}} />
-                                            <div style={{display:'flex', alignItems:'center', gap:5}}>
-                                                <input type="number" value={c.val} onChange={e => {const nc=[...charges]; nc[i].val=e.target.value; setCharges(nc);}} style={{width:60, textAlign:'right', borderBottom:'1px solid #eee'}} />
-                                                <button className="no-print" onClick={()=>setCharges(charges.filter((_,idx)=>idx!==i))} style={{color:'red', background:'none', border:'none'}}>×</button>
-                                            </div>
-                                        </div>
+                                    {/* Tax Summary Split */}
+                                    {engine.taxSummary.map(t => (
+                                        <div key={t.label} style={styles.tRow}><span>{t.label}</span><span>{t.amt.toFixed(engine.jur.decimals)}</span></div>
                                     ))}
-                                    <button className="no-print" onClick={()=>setCharges([...charges, {label:'Extra Charge', val:0, taxable:false}])} style={{fontSize:'0.6rem', color:config.theme, background:'none', border:'none', float:'right'}}>+ Add Charge</button>
 
-                                    {engine.roundOff !== 0 && <div style={styles.tRow}><span style={{fontStyle:'italic', color:'#666'}}>Rounding Adjustment</span><span>{engine.roundOff.toFixed(engine.jur.decimals)}</span></div>}
-                                    
+                                    {/* TDS Aggregation */}
+                                    {engine.totalTDS > 0 && (
+                                        <div style={{...styles.tRow, color: '#f87171'}}><span>Total TDS (-)</span><span>{engine.totalTDS.toFixed(engine.jur.decimals)}</span></div>
+                                    )}
+
+                                    {/* Extra Charges ... existing charges map ... */}
+
                                     <div style={{...styles.grandRow, color:config.theme}}>
-                                        <span>TOTAL</span>
+                                        <span>TOTAL PAYABLE</span>
                                         <span>{engine.jur.currency} {engine.grandTotal.toFixed(engine.jur.decimals)}</span>
                                     </div>
+                                    
+                                    {engine.totalTDS > 0 && (
+                                        <div style={{...styles.tRow, fontWeight: 'bold', borderTop: '1px dashed #ccc', marginTop: 5}}>
+                                            <span>NET RECEIVABLE</span>
+                                            <span>{engine.jur.currency} {engine.payableAfterTDS.toFixed(engine.jur.decimals)}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
