@@ -7,10 +7,13 @@ import { JURISDICTIONS, amountToWords } from '../../engine-data/logic';
 const INITIAL_STATE = {
     config: { country: 'AE', taxMode: 'exclusive', theme: '#064e3b', taxLabel: 'VAT', rounding: 'nearest', isExport: false, isReverse: false, defaultTaxRate: 5 },
     columns: [
-        { id: 'desc', label: 'Description', visible: true, private: false, width: 250, type: 'text' },
+        { id: 'desc', label: 'Description', visible: true, private: false, width: 220, type: 'text' },
         { id: 'qty', label: 'Qty', visible: true, private: false, width: 60, type: 'number' },
-        { id: 'rate', label: 'Price', visible: true, private: false, width: 100, type: 'number' },
-        { id: 'tax', label: 'VAT%', visible: true, private: false, width: 70, type: 'number' }
+        { id: 'rate', label: 'Price', visible: true, private: false, width: 90, type: 'number' },
+        { id: 'disc_p', label: 'Disc %', visible: true, private: false, width: 70, type: 'number' }, // New
+        { id: 'disc_a', label: 'Disc Amount', visible: true, private: false, width: 90, type: 'number' }, // New
+        { id: 'tax', label: 'Tax %', visible: true, private: false, width: 70, type: 'number' },
+        { id: 'amount', label: 'Amount', visible: true, private: false, width: 100, type: 'formula', formula: '(Qty * Price) - DiscAmount' } // Updated formula
     ],
     meta: { 
         title: 'TAX INVOICE', iNum: 'INV-1001', date: new Date().toISOString().split('T')[0], due: '', supply: '',
@@ -45,11 +48,14 @@ export default function EnterpriseInvoiceSuite() {
     // --- FORMULA RESOLVER ---
     const resolveFormula = (formula, row) => {
         if (!formula) return 0;
-        let expr = formula;
+        let expr = formula.toLowerCase().replace(/\s/g, ''); // Clean formula spaces/case
+        
         [...columns].sort((a,b) => b.label.length - a.label.length).forEach(col => {
-            const val = parseFloat(row[col.id]) || 0;
-            expr = expr.split(col.label).join(val);
+            const cleanLabel = col.label.toLowerCase().replace(/\s/g, ''); // Clean column label
+            const value = parseFloat(row[col.id]) || 0;
+            expr = expr.split(cleanLabel).join(value);
         });
+        
         expr = expr.replace(/[^-()\d/*+.]/g, ''); 
         try { return Function(`"use strict"; return (${expr})`)() || 0; } catch { return 0; }
     };
@@ -60,7 +66,12 @@ export default function EnterpriseInvoiceSuite() {
         const rows = items.map(item => {
             let comp = { ...item };
             columns.forEach(c => { if(c.type==='formula') comp[c.id] = resolveFormula(c.formula, item); });
-            const base = (parseFloat(comp.qty) || 0) * (parseFloat(comp.rate) || 0);
+            const qty = parseFloat(comp.qty) || 0;
+            const rate = parseFloat(comp.rate) || 0;
+            const discountAmount = parseFloat(comp.disc_a) || 0;
+            
+            // The Taxable Base is (Qty * Rate) - Discount Amount
+            const base = (qty * rate) - discountAmount;
             const taxR = comp.tax !== undefined ? parseFloat(comp.tax) : parseFloat(config.defaultTaxRate);
             const tax = config.taxMode === 'exclusive' ? (base * taxR / 100) : (base - (base / (1 + taxR / 100)));
             return { ...comp, lineBase: base, lineTax: tax, lineTotal: config.taxMode === 'exclusive' ? base + tax : base };
@@ -235,12 +246,45 @@ export default function EnterpriseInvoiceSuite() {
                                         {columns.map((c, ci) => (
                                             <td key={ci} className={`${!c.visible ? 'shb-hidden' : ''} ${c.private ? 'shb-private' : ''}`} style={styles.td}>
                                                 <textarea 
-                                                    style={{...styles.ghostInp, minHeight:35}} 
-                                                    value={item[c.id] || ''} 
-                                                    readOnly={c.type==='formula'}
-                                                    onChange={e => { const ni=[...items]; ni[idx][c.id]=e.target.value; setItems(ni); }} 
-                                                    onInput={autoGrow}
-                                                />
+    style={{...styles.ghostInp, minHeight:35}} 
+    value={item[c.id] || ''} 
+    readOnly={c.type==='formula'}
+    // NEW: If the column type is number, only allow numeric input
+    onKeyDown={(e) => {
+        if (c.type === 'number' && !/[0-9.]|Backspace|Tab|Enter|Arrow/.test(e.key)) {
+            e.preventDefault();
+        }
+    }}
+    onChange={e => { 
+        const val = e.target.value;
+        const ni = [...items]; 
+        const item = ni[idx];
+        const qty = parseFloat(item.qty) || 0;
+        const rate = parseFloat(item.rate) || 0;
+        const gross = qty * rate;
+
+        // 1. Validation: prevent text in number fields
+        if (c.type === 'number' && isNaN(val) && val !== '') return;
+        
+        // 2. Update the field value
+        item[c.id] = val;
+
+        // 3. Bi-directional Linked Logic for Discounts
+        if (c.id === 'disc_p') {
+            // If % changed, calculate Amount
+            item.disc_a = ((gross * (parseFloat(val) || 0)) / 100).toFixed(config.decimals);
+        } else if (c.id === 'disc_a') {
+            // If Amount changed, calculate %
+            item.disc_p = gross !== 0 ? ((parseFloat(val) || 0) / gross * 100).toFixed(2) : 0;
+        } else if (c.id === 'qty' || c.id === 'rate') {
+            // If Qty or Rate changed, recalculate Amount based on existing %
+            item.disc_a = (( (parseFloat(item.qty)||0) * (parseFloat(item.rate)||0) * (parseFloat(item.disc_p) || 0)) / 100).toFixed(config.decimals);
+        }
+
+        setItems(ni); 
+    }}
+    onInput={autoGrow}
+/>
                                             </td>
                                         ))}
                                         <td style={{...styles.td, textAlign:'right', fontWeight:'bold'}}>{item.lineTotal.toFixed(engine.jur.decimals)}</td>
@@ -280,7 +324,7 @@ export default function EnterpriseInvoiceSuite() {
                                     {engine.roundOff !== 0 && <div style={styles.tRow}><span style={{fontStyle:'italic', color:'#666'}}>Rounding Adjustment</span><span>{engine.roundOff.toFixed(engine.jur.decimals)}</span></div>}
                                     
                                     <div style={{...styles.grandRow, color:config.theme}}>
-                                        <span>{activeLabel} TOTAL</span>
+                                        <span>TOTAL</span>
                                         <span>{engine.jur.currency} {engine.grandTotal.toFixed(engine.jur.decimals)}</span>
                                     </div>
                                 </div>
@@ -299,7 +343,7 @@ export default function EnterpriseInvoiceSuite() {
                                 </div>
                                 <div onClick={()=>document.getElementById('s-up').click()} style={{textAlign:'right', cursor:'pointer'}}>
                                     {meta.signature ? <img src={meta.signature} style={{maxHeight:85}} /> : <div style={{height:60, borderBottom:'1px solid #000', width:220}}></div>}
-                                    <span style={{fontSize:'0.65rem', fontWeight:'bold', display:'block', marginTop:5}}>{activeLabel} AUTHORIZED SIGNATORY</span>
+                                    <span style={{fontSize:'0.65rem', fontWeight:'bold', display:'block', marginTop:5}}>AUTHORIZED SIGNATORY</span>
                                     <input id="s-up" type="file" hidden onChange={e=>handleFile(e, 'signature')} />
                                 </div>
                             </div>
@@ -313,22 +357,46 @@ export default function EnterpriseInvoiceSuite() {
             </div>
 
             <style jsx global>{`
-                @media print {
-                    @page { size: A4; margin: 12mm 0; }
-                    body { background: #fff !important; margin: 0; padding: 0; }
-                    .no-print, .no-print-bg { display: none !important; }
-                    #invoice-paper { width: 100% !important; height: auto !important; padding: 15mm !important; box-shadow: none !important; margin: 0 !important; }
-                    .repeat-header { display: table-header-group !important; }
-                    .item-row { page-break-inside: avoid !important; }
-                    .totals-block { page-break-inside: avoid !important; }
-                    .shb-private { display: none !important; }
-                    input, textarea { color: #000 !important; }
-                    .page-counter:after { content: counter(page); }
-                }
-                .shb-hidden { display: none !important; }
-                textarea { resize: none; overflow: hidden; width: 100%; }
-                input:hover, textarea:hover { background: rgba(0,0,0,0.02) !important; border-radius: 4px; }
-            `}</style>
+    @media screen {
+        .shb-badge { font-size: 0.6rem; background: #000; color:#fff; padding: 4px 10px; border: 1px solid #000; font-weight: 900; }
+    }
+
+    @media print {
+        /* 1. HIDE EVERYTHING ON THE WEBSITE */
+        header, nav, aside, footer, .no-print, .no-print-bg, [class*="ToolboxLayout_nav"] { 
+            display: none !important; 
+        }
+
+        /* 2. FORCE FULL WIDTH FOR THE INVOICE ONLY */
+        body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+        
+        /* This targets the specific workspace and paper */
+        main { padding: 0 !important; margin: 0 !important; display: block !important; }
+        
+        #invoice-paper { 
+            width: 100% !important; 
+            height: auto !important; 
+            padding: 10mm !important; 
+            box-shadow: none !important; 
+            margin: 0 !important; 
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+        }
+
+        /* 3. TABLE BREAKS */
+        .repeat-header { display: table-header-group !important; }
+        .item-row { page-break-inside: avoid !important; }
+        .totals-block { page-break-inside: avoid !important; }
+        .shb-private { display: none !important; }
+
+        /* 4. TEXT COLORS */
+        input, textarea { color: #000 !important; -webkit-print-color-adjust: exact; }
+    }
+
+    textarea { resize: none; overflow: hidden; width: 100%; }
+    input:hover, textarea:hover { background: rgba(0,0,0,0.02) !important; border-radius: 4px; }
+`}</style>
         </ToolboxLayout>
     );
 }
