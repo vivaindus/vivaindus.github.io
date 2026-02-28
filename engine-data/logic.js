@@ -1,14 +1,12 @@
 export const JURISDICTIONS = {
-    AE: { name: 'United Arab Emirates', currency: 'AED', taxLabel: 'VAT', taxRate: 5, decimals: 2, major: 'Dirham', minor: 'Fils' },
+    AE: { name: 'UAE', currency: 'AED', taxLabel: 'VAT', taxRate: 5, decimals: 2, major: 'Dirham', minor: 'Fils' },
+    IN: { name: 'India', currency: 'INR', taxLabel: 'GST', taxRate: 18, decimals: 2, major: 'Rupee', minor: 'Paise', hasSplitTax: true },
     OM: { name: 'Oman', currency: 'OMR', taxLabel: 'VAT', taxRate: 5, decimals: 3, major: 'Rial', minor: 'Baisa' },
     SA: { name: 'Saudi Arabia', currency: 'SAR', taxLabel: 'VAT', taxRate: 15, decimals: 2, major: 'Riyal', minor: 'Halala' },
-    IN: { name: 'India', currency: 'INR', taxLabel: 'GST', taxRate: 18, decimals: 2, major: 'Rupee', minor: 'Paise', hasSplitTax: true },
-    US: { name: 'United States', currency: 'USD', taxLabel: 'Sales Tax', taxRate: 0, decimals: 2, major: 'Dollar', minor: 'Cents' }
+    US: { name: 'USA', currency: 'USD', taxLabel: 'Sales Tax', taxRate: 0, decimals: 2, major: 'Dollar', minor: 'Cents' }
 };
 
 export const amountToWords = (total, config) => {
-    const n = Math.abs(parseFloat(total));
-    if (isNaN(n) || n === 0) return `Zero ${config.major} Only`;
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
     const scales = ['', 'Thousand', 'Million', 'Billion'];
@@ -19,6 +17,8 @@ export const amountToWords = (total, config) => {
         if (num > 0) { str += ones[num] + ' '; }
         return str.trim();
     };
+    const n = Math.abs(parseFloat(total));
+    if (isNaN(n) || n === 0) return `Zero ${config.major} Only`;
     const parts = n.toFixed(config.decimals).split('.');
     let majorNum = parseInt(parts[0]);
     const minorNum = parseInt(parts[1]);
