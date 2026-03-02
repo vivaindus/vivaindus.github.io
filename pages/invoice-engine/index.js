@@ -1,320 +1,207 @@
 import React, { useState, useMemo } from 'react';
-import { InvoiceEngine, numberToWords } from '../../engine-data/logic';
+import { InvoiceLogic } from '../../engine-data/logic';
 
-export default function RefrensStyleInvoice() {
-  const [status, setStatus] = useState('DRAFT');
+export default function EnterpriseInvoiceApp() {
+  const [status, setStatus] = useState('DRAFT'); // DRAFT, FINAL, CANCELLED
+  const [activeSections, setActiveSections] = useState({ 
+    shipping: false, bank: true, signature: true, terms: true, tds: false 
+  });
+
   const [invoice, setInvoice] = useState({
-    invoiceNo: "INV-2024-001",
+    title: "Tax Invoice",
+    invoiceNo: "INV-2026-0001",
     date: new Date().toISOString().split('T')[0],
     dueDate: "",
-    currency: "USD",
-    company: { name: "", address: "", taxId: "" },
-    customer: { name: "", address: "", taxId: "" },
-    items: [{ id: Date.now(), description: "", qty: 1, unitPrice: 0, taxRate: 0 }],
+    currency: "AED",
+    billedBy: { name: "", taxId: "", address: "", phone: "", email: "" },
+    billedTo: { name: "", taxId: "", address: "", shipping: "" },
+    items: [{ id: Date.now(), name: "", desc: "", hsn: "", qty: 1, unit: "Pcs", unitPrice: 0, taxRate: 5, discountValue: 0, discountType: 'percent' }],
+    columns: [
+      { key: 'name', label: 'Item', visible: true, width: '30%' },
+      { key: 'hsn', label: 'HSN/SAC', visible: false, width: '10%' },
+      { key: 'qty', label: 'Qty', visible: true, width: '10%' },
+      { key: 'unitPrice', label: 'Rate', visible: true, width: '15%' },
+      { key: 'taxRate', label: 'VAT %', visible: true, width: '10%' },
+      { key: 'lineTotal', label: 'Amount', visible: true, width: '15%' }
+    ],
     globalDiscount: { value: 0, type: 'percent', layer: 'before_tax' },
     extraCharges: [],
     tdsRate: 0,
-    config: { roundingMode: 'HALF_EVEN', precision: 2, taxInclusive: false }
+    manualRounding: null,
+    config: { taxInclusive: false }
   });
 
   const totals = useMemo(() => {
-    const engine = new InvoiceEngine(invoice.config);
+    const engine = new InvoiceLogic(invoice.config);
     return engine.calculate(invoice);
   }, [invoice]);
 
-  const isLocked = status === 'FINAL';
+  const isLocked = status !== 'DRAFT';
+
+  // State Update Helpers
+  const updateItem = (id, field, value) => {
+    setInvoice({
+      ...invoice,
+      items: invoice.items.map(item => item.id === id ? { ...item, [field]: value } : item)
+    });
+  };
+
+  const addItem = () => {
+    setInvoice({ ...invoice, items: [...invoice.items, { id: Date.now(), name: "", desc: "", qty: 1, unitPrice: 0, taxRate: 5 }] });
+  };
 
   return (
-    <div className="refrens-container">
-      <style>{`
-        .refrens-container {
-          background-color: #f3f4f6;
-          min-height: 100vh;
-          padding: 40px 20px;
-          display: flex;
-          justify-content: center;
-          font-family: 'Inter', sans-serif;
-        }
-        .main-wrapper {
-          display: flex;
-          gap: 30px;
-          max-width: 1200px;
-          width: 100%;
-        }
-        .invoice-paper {
-          background: white;
-          width: 210mm;
-          min-height: 297mm;
-          padding: 60px;
-          box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-          position: relative;
-        }
-        .sidebar {
-          width: 320px;
-          position: sticky;
-          top: 40px;
-          height: fit-content;
-        }
-        .action-card {
-          background: white;
-          padding: 24px;
-          border-radius: 12px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-          margin-bottom: 20px;
-        }
-        .btn-primary {
-          background: #2563eb;
-          color: white;
-          width: 100%;
-          padding: 12px;
-          border-radius: 8px;
-          font-weight: 700;
-          border: none;
-          cursor: pointer;
-          margin-bottom: 12px;
-        }
-        .btn-secondary {
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          color: #475569;
-          width: 100%;
-          padding: 12px;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-        }
-        .input-minimal {
-          border: 1px solid transparent;
-          padding: 4px 8px;
-          width: 100%;
-          font-size: 14px;
-          transition: border 0.2s;
-        }
-        .input-minimal:hover:not(:disabled), .input-minimal:focus {
-          border-color: #e2e8f0;
-          background: #f8fafc;
-          outline: none;
-        }
-        .invoice-header {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 60px;
-        }
-        .logo-box {
-          width: 150px;
-          height: 80px;
-          background: #f1f5f9;
-          border: 2px dashed #cbd5e1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #94a3b8;
-          font-size: 12px;
-          font-weight: 700;
-        }
-        .label-group {
-          margin-bottom: 20px;
-        }
-        .label {
-          font-size: 10px;
-          text-transform: uppercase;
-          color: #94a3b8;
-          font-weight: 800;
-          letter-spacing: 0.5px;
-          display: block;
-          margin-bottom: 4px;
-        }
-        .items-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 40px 0;
-        }
-        .items-table th {
-          background: #f8fafc;
-          padding: 12px;
-          text-align: left;
-          font-size: 11px;
-          text-transform: uppercase;
-          color: #64748b;
-        }
-        .items-table td {
-          padding: 12px;
-          border-bottom: 1px solid #f1f5f9;
-        }
-        .totals-section {
-          margin-left: auto;
-          width: 300px;
-          margin-top: 40px;
-        }
-        .total-row {
-          display: flex;
-          justify-content: space-between;
-          padding: 8px 0;
-          font-size: 14px;
-          color: #475569;
-        }
-        .grand-total {
-          border-top: 2px solid #000;
-          margin-top: 12px;
-          padding-top: 12px;
-          font-weight: 900;
-          font-size: 18px;
-          color: #000;
-        }
-        @media print {
-          .sidebar, .no-print { display: none !important; }
-          .refrens-container { background: white; padding: 0; }
-          .invoice-paper { box-shadow: none; padding: 20mm; }
-        }
-      `}</style>
+    <div className="bg-slate-100 min-h-screen py-10 px-4 flex justify-center gap-8 no-print:bg-white">
+      <div className="app-container flex gap-8 max-w-[1400px] w-full items-start">
+        
+        {/* DOCUMENT CANVAS */}
+        <main className="a4-canvas">
+          {status === 'CANCELLED' && <div className="absolute inset-0 flex items-center justify-center text-[100px] font-black text-red-500 opacity-10 rotate-45 pointer-events-none">CANCELLED</div>}
 
-      <div className="main-wrapper">
-        {/* INVOICE PAPER AREA */}
-        <div className="invoice-paper">
-          <div className="invoice-header">
-            <div>
-              <h1 style={{fontSize: '32px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '20px'}}>Tax Invoice</h1>
-              <div className="label-group">
-                <input 
-                  className="input-minimal" 
-                  style={{fontSize: '18px', fontWeight: 700}} 
-                  placeholder="Your Company Name" 
-                  disabled={isLocked}
-                />
-                <textarea 
-                  className="input-minimal" 
-                  style={{height: '60px', color: '#64748b'}} 
-                  placeholder="Company Address & Tax ID"
-                  disabled={isLocked}
-                />
+          {/* Header */}
+          <header className="flex justify-between items-start mb-12">
+            <div className="flex-1">
+              <input className="refrens-input text-4xl font-black uppercase tracking-tight w-full" defaultValue={invoice.title} disabled={isLocked} />
+              <div className="grid grid-cols-2 gap-4 mt-8 w-[350px]">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase">Invoice No</label>
+                  <input className="refrens-input font-bold" defaultValue={invoice.invoiceNo} disabled={isLocked} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase">Date</label>
+                  <input type="date" className="refrens-input" defaultValue={invoice.date} disabled={isLocked} />
+                </div>
               </div>
             </div>
-            <div className="logo-box">UPLOAD LOGO</div>
-          </div>
+            <div className="w-40 h-24 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-[10px] text-slate-300 font-bold uppercase">Logo Upload</div>
+          </header>
 
-          <div style={{display: 'flex', gap: '40px', marginBottom: '40px'}}>
-            <div style={{flex: 1}}>
-              <span className="label">Bill To</span>
-              <input className="input-minimal" style={{fontWeight: 700}} placeholder="Customer Name" disabled={isLocked} />
-              <textarea className="input-minimal" style={{height: '60px', color: '#64748b'}} placeholder="Customer Address & Tax ID" disabled={isLocked} />
+          {/* Billing */}
+          <section className="flex justify-between gap-10 mb-12 border-y border-slate-50 py-8">
+            <div className="flex-1 space-y-2">
+              <span className="text-[11px] font-black text-blue-600 uppercase">Billed By</span>
+              <input className="refrens-input font-black block" placeholder="Your Company Name" disabled={isLocked} />
+              <textarea className="refrens-input text-slate-500 text-xs w-full h-16 resize-none" placeholder="Company Address, Tax ID, Phone" disabled={isLocked} />
             </div>
-            <div style={{width: '200px'}}>
-              <div className="label-group">
-                <span className="label">Invoice No.</span>
-                <input className="input-minimal" defaultValue={invoice.invoiceNo} disabled={isLocked} />
-              </div>
-              <div className="label-group">
-                <span className="label">Date</span>
-                <input type="date" className="input-minimal" defaultValue={invoice.date} disabled={isLocked} />
-              </div>
+            <div className="flex-1 space-y-2">
+              <span className="text-[11px] font-black text-blue-600 uppercase">Billed To</span>
+              <input className="refrens-input font-black block" placeholder="Client Name" disabled={isLocked} />
+              <textarea className="refrens-input text-slate-500 text-xs w-full h-16 resize-none" placeholder="Client Address, Tax ID" disabled={isLocked} />
             </div>
-          </div>
+          </section>
 
-          <table className="items-table">
+          {/* Items Table */}
+          <table className="w-full mb-8">
             <thead>
-              <tr>
-                <th style={{width: '50%'}}>Description</th>
-                <th>Qty</th>
-                <th>Unit Price</th>
-                <th>Tax %</th>
-                <th style={{textAlign: 'right'}}>Amount</th>
+              <tr className="bg-slate-50 border-b-2 border-slate-200">
+                {invoice.columns.filter(c => c.visible).map(col => (
+                  <th key={col.key} className="p-3 text-left text-[10px] uppercase font-black text-slate-500" style={{ width: col.width }}>{col.label}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {invoice.items.map((item, idx) => (
-                <tr key={item.id}>
-                  <td><input className="input-minimal" placeholder="Item description" disabled={isLocked} /></td>
-                  <td>
-                    <input 
-                      type="number" 
-                      className="input-minimal" 
-                      value={item.qty} 
-                      onChange={e => {
-                        const next = [...invoice.items];
-                        next[idx].qty = parseFloat(e.target.value) || 0;
-                        setInvoice({...invoice, items: next});
-                      }}
-                      disabled={isLocked}
-                    />
-                  </td>
-                  <td>
-                    <input 
-                      type="number" 
-                      className="input-minimal" 
-                      value={item.unitPrice} 
-                      onChange={e => {
-                        const next = [...invoice.items];
-                        next[idx].unitPrice = parseFloat(e.target.value) || 0;
-                        setInvoice({...invoice, items: next});
-                      }}
-                      disabled={isLocked}
-                    />
-                  </td>
-                  <td>
-                    <input 
-                      type="number" 
-                      className="input-minimal" 
-                      value={item.taxRate} 
-                      onChange={e => {
-                        const next = [...invoice.items];
-                        next[idx].taxRate = parseFloat(e.target.value) || 0;
-                        setInvoice({...invoice, items: next});
-                      }}
-                      disabled={isLocked}
-                    />
-                  </td>
-                  <td style={{textAlign: 'right', fontWeight: 700}}>{item.lineTotal?.toFixed(2) || '0.00'}</td>
+              {totals.items.map((item, idx) => (
+                <tr key={item.id} className="border-b border-slate-50">
+                  {invoice.columns.filter(c => c.visible).map(col => (
+                    <td key={col.key} className="p-2">
+                      {col.key === 'lineTotal' ? <span className="font-bold text-sm">{(item.total || 0).toFixed(2)}</span> :
+                       <input 
+                         className="refrens-input w-full text-sm" 
+                         type={typeof item[col.key] === 'number' ? 'number' : 'text'}
+                         value={item[col.key]}
+                         onChange={e => updateItem(item.id, col.key, e.target.type === 'number' ? parseFloat(e.target.value) : e.target.value)}
+                         disabled={isLocked}
+                       />}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
           </table>
 
-          {!isLocked && (
+          <button onClick={addItem} className="no-print text-blue-600 font-bold text-xs hover:underline mb-12 disabled:opacity-0" disabled={isLocked}>+ Add New Line</button>
+
+          {/* Totals Section */}
+          <div className="ml-auto w-[350px] space-y-2 mt-10">
+            <div className="flex justify-between text-sm text-slate-500 uppercase font-bold"><span>Subtotal</span> <span>{totals.subtotal.toFixed(2)}</span></div>
+            <div className="flex justify-between text-sm text-slate-500 uppercase font-bold"><span>Tax Total</span> <span>{totals.totalTax.toFixed(2)}</span></div>
+            {totals.taxSummary.map(t => (
+              <div key={t.rate} className="flex justify-between text-[11px] text-slate-400 pl-4 italic"><span>Tax @ {t.rate}%</span> <span>{t.amt.toFixed(2)}</span></div>
+            ))}
+            <div className="flex justify-between border-t-4 border-black pt-4 items-center">
+              <span className="text-xl font-black uppercase">Total Due</span>
+              <span className="text-3xl font-black">{invoice.currency} {totals.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            </div>
+            <p className="text-right text-[10px] font-black text-slate-400 mt-2 uppercase italic">{InvoiceLogic.toWords(totals.grandTotal)}</p>
+          </div>
+
+          {/* Bank & Sign */}
+          <footer className="mt-20 flex justify-between gap-10 items-end">
+            <div className="flex-1 bg-slate-50 p-6 rounded-xl border border-slate-100">
+               <span className="text-[10px] font-black text-slate-400 uppercase">Bank Account Details</span>
+               <textarea className="refrens-input w-full mt-2 h-20 text-xs font-mono bg-transparent" placeholder="Bank Name, IBAN, Swift Code" disabled={isLocked} />
+            </div>
+            <div className="w-48 text-center border-t border-slate-900 pt-2">
+               <span className="text-[10px] font-black text-slate-900 uppercase">Authorized Signatory</span>
+            </div>
+          </footer>
+        </main>
+
+        {/* SIDEBAR CONTROLS */}
+        <aside className="sidebar w-[350px] no-print">
+          <div className="bg-white p-6 rounded-2xl shadow-xl border border-slate-200 sticky top-10 space-y-6">
             <button 
-              className="btn-secondary no-print" 
-              style={{width: 'auto', padding: '8px 16px'}}
-              onClick={() => setInvoice({...invoice, items: [...invoice.items, {id: Date.now(), qty: 1, unitPrice: 0, taxRate: 0}]})}
-            >+ Add New Line</button>
-          )}
+              onClick={() => setStatus('FINAL')} 
+              className="w-full bg-slate-900 text-white py-4 rounded-xl font-black text-sm hover:bg-black transition-all disabled:opacity-50"
+              disabled={isLocked}
+            >
+              {isLocked ? '🔒 DOCUMENT LOCKED' : 'FINALIZE & DOWNLOAD'}
+            </button>
 
-          <div className="totals-section">
-            <div className="total-row"><span>Subtotal</span> <span>{totals.subtotal.toFixed(2)}</span></div>
-            <div className="total-row"><span>Total Tax</span> <span>{totals.totalTax.toFixed(2)}</span></div>
-            <div className="total-row grand-total">
-              <span>Grand Total</span>
-              <span>{invoice.currency} {totals.grandTotal.toFixed(2)}</span>
-            </div>
-            <p style={{fontSize: '10px', textAlign: 'right', marginTop: '10px', color: '#94a3b8', fontWeight: 800}}>
-              {numberToWords(totals.grandTotal)}
-            </p>
-          </div>
-        </div>
-
-        {/* SIDEBAR AREA */}
-        <div className="sidebar no-print">
-          <div className="action-card">
-            <button className="btn-primary" onClick={() => setStatus('FINAL')}>{isLocked ? '✓ Locked' : 'Finalize & Lock'}</button>
-            <button className="btn-secondary" onClick={() => window.print()}>Print / Save PDF</button>
-          </div>
-          <div className="action-card">
-            <span className="label">Configuration</span>
-            <div style={{marginTop: '15px'}}>
-               <label style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px'}}>
-                  <input type="checkbox" onChange={e => setInvoice({...invoice, config: {...invoice.config, taxInclusive: e.target.checked}})} />
+            <div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">Configuration</span>
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 text-sm font-bold text-slate-700 cursor-pointer">
+                  <input type="checkbox" checked={invoice.config.taxInclusive} onChange={e => setInvoice({...invoice, config: {...invoice.config, taxInclusive: e.target.checked}})} disabled={isLocked} />
                   Tax Inclusive Mode
-               </label>
+                </label>
+                <div className="flex justify-between items-center text-sm font-bold">
+                  <span>Rounding</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => setInvoice({...invoice, manualRounding: 'up'})} className="px-2 py-1 border rounded text-[10px] hover:bg-slate-50" disabled={isLocked}>UP</button>
+                    <button onClick={() => setInvoice({...invoice, manualRounding: 'down'})} className="px-2 py-1 border rounded text-[10px] hover:bg-slate-50" disabled={isLocked}>DOWN</button>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div style={{marginTop: '15px'}}>
-               <span className="label">TDS Rate %</span>
-               <input 
-                  type="number" 
-                  className="input-minimal" 
-                  style={{border: '1px solid #e2e8f0', borderRadius: '4px'}}
-                  onChange={e => setInvoice({...invoice, tdsRate: parseFloat(e.target.value) || 0})}
-               />
+
+            <div className="border-t pt-6">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">Column Toggle</span>
+              <div className="flex flex-wrap gap-2">
+                {invoice.columns.map(col => (
+                  <button 
+                    key={col.key} 
+                    onClick={() => {
+                      const next = [...invoice.columns];
+                      const target = next.find(c => c.key === col.key);
+                      target.visible = !target.visible;
+                      setInvoice({...invoice, columns: next});
+                    }}
+                    className={`text-[9px] px-2 py-1 rounded-full border transition-all font-black ${col.visible ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-400 border-slate-200'}`}
+                  >
+                    {col.label}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {isLocked && (
+              <button onClick={() => setStatus('DRAFT')} className="w-full border-2 border-red-100 text-red-600 py-3 rounded-xl font-bold text-xs hover:bg-red-50">
+                UNLOCK FOR EDITING
+              </button>
+            )}
           </div>
-        </div>
+        </aside>
       </div>
     </div>
   );

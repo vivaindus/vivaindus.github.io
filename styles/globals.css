@@ -1,7 +1,33 @@
-/* 1. TAILWIND DIRECTIVES (Must be at the top) */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root { --refrens-blue: #2563eb; --refrens-bg: #f3f5f7; }
+
+.a4-canvas {
+    width: 210mm;
+    min-height: 297mm;
+    background: white;
+    padding: 50px;
+    margin: 0 auto;
+    box-shadow: 0 10px 50px rgba(0,0,0,0.05);
+    position: relative;
+}
+
+.refrens-input {
+    @apply border border-transparent hover:border-slate-200 hover:bg-slate-50 focus:border-blue-500 focus:bg-white focus:ring-0 transition-all rounded p-1;
+}
+
+.eye-btn { @apply opacity-20 hover:opacity-100 transition-opacity p-1 grayscale hover:grayscale-0; }
+.section-locked { @apply pointer-events-none opacity-80; }
+
+@media print {
+    .no-print { display: none !important; }
+    body { background: white; margin: 0; padding: 0; }
+    .a4-canvas { box-shadow: none; border: none; margin: 0; width: 100%; padding: 15mm; }
+    .private-col { display: none !important; }
+    thead { display: table-header-group; }
+}
 /* RESET FOR NEXT.JS */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 img { max-width: 100%; height: auto; display: block; }
