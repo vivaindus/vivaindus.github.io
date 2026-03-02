@@ -8,11 +8,17 @@ const INITIAL_STATE = {
     config: { 
         country: 'AE', taxMode: 'exclusive', theme: '#064e3b', taxLabel: 'VAT', 
         rounding: 'nearest', isExport: false, isReverse: false, defaultTaxRate: 5,
-        indiaTaxType: 'cgst_sgst', // for India IGST support
-        globalDiscountLayer: 'before_tax', // before_tax or after_tax
-        roundLineLevel: false, // line-level rounding control
-        roundingPrecision: 2 // decimal precision for rounding
+        globalDiscountLayer: 'before_tax', // Layer 4 vs Layer 7
+        roundingPrecision: 2 
+        
     },
+    columns: [
+        { id: 'desc', label: 'Item Description', visible: true, private: false, width: 250, type: 'text' },
+        { id: 'qty', label: 'Quantity', visible: true, private: false, width: 60, type: 'number' },
+        { id: 'rate', label: 'Unit Price', visible: true, private: false, width: 100, type: 'number' },
+        { id: 'tax', label: 'Tax %', visible: true, private: false, width: 70, type: 'number' },
+        { id: 'line_total', label: 'Line Total', visible: true, private: false, width: 110, type: 'system' }
+    ],
     meta: { 
         title: 'TAX INVOICE', iNum: 'INV-1001', date: new Date().toISOString().split('T')[0], due: '', supply: '',
         sender: 'SHIFA STORES\nDubai, UAE\nTRN: 100XXXXXXXXXXXX', client: 'CLIENT NAME\nTRN: 100XXXXXXXXXXXX', 
@@ -44,31 +50,29 @@ export default function ShbEnterpriseV32() {
     }, []);
 
     // --- ENHANCED FORMULA RESOLVER ---
-    const resolveFormula = (formula, row, computedValues) => {
+    const resolveFormula = (formula, row, ctx) => {
         if (!formula) return 0;
         let expr = formula;
-        // Map Labels to Values (Labels take priority)
-        const mapping = {
-            'Qty': row.qty,
-            'Price': row.rate,
-            'Rate': row.rate,
-            'Tax': computedValues.taxAmt,
-            'Amount': computedValues.lineTotal,
-            'Net': computedValues.taxable,
-            'Discount': (parseFloat(row.qty||0)*parseFloat(row.rate||0)*parseFloat(row.disc_p||0)/100) || row.disc_a || 0
+
+        // Map system values first
+        const map = {
+            'Qty': row.qty, 'Price': row.rate, 'Quantity': row.qty,
+            'Amount': ctx.lineTotal, 'Tax': ctx.taxAmt, 'Net': ctx.taxableAmount
         };
 
-        Object.keys(mapping).forEach(key => {
-            const val = parseFloat(mapping[key]) || 0;
-            expr = expr.split(key).join(val);
+        // Replace Keywords in formula
+        Object.keys(map).forEach(key => {
+            const regex = new RegExp(`\\b${key}\\b`, 'g');
+            expr = expr.replace(regex, parseFloat(map[key]) || 0);
         });
 
-        // Map any dynamic custom columns by Label
+        // Replace other column labels (Case insensitive)
         columns.forEach(col => {
-            const val = parseFloat(row[col.id]) || 0;
-            expr = expr.split(col.label).join(val);
+            const regex = new RegExp(`\\b${col.label}\\b`, 'gi');
+            expr = expr.replace(regex, parseFloat(row[col.id]) || 0);
         });
 
+        // Final cleanup and safety eval
         expr = expr.replace(/[^-()\d/*+.]/g, ''); 
         try { return Function(`"use strict"; return (${expr})`)() || 0; } catch { return 0; }
     };
@@ -77,103 +81,102 @@ export default function ShbEnterpriseV32() {
     const engine = useMemo(() => {
         const jur = JURISDICTIONS[config.country];
         
-        // 1. Process Line Items
+        // --- PHASE A: LINE LEVEL LAYERS ---
         const rows = items.map(item => {
-            const qty = Math.max(0, parseFloat(item.qty) || 0);
-            const rate = Math.max(0, parseFloat(item.rate) || 0);
-            
-            // CALC-02: Export/Reverse Charge Logic
-            let taxR = config.isExport || config.isReverse ? 0 : 
-                       (item.tax !== undefined ? parseFloat(item.tax) : parseFloat(config.defaultTaxRate));
+            const rawQty = parseFloat(item.qty) || 0;
+            const rawPrice = parseFloat(item.rate) || 0;
+            const taxRate = item.tax !== undefined ? parseFloat(item.tax) : parseFloat(config.defaultTaxRate);
 
-            // 1.1 Base Calculation
-            let base = qty * rate;
-            
-            // CHG-01: Line Charges
-            if (item.charge_p) base += (base * parseFloat(item.charge_p) / 100);
-            if (item.charge_a) base += parseFloat(item.charge_a);
+            // Layer 1: Base
+            let base = rawQty * rawPrice;
 
-            // 1.2 Line Discounts (VAL-02: Over-discount protection)
+            // Layer 2: Add Line Charges (Optional Columns)
+            if (item.line_charge_p) base += (base * parseFloat(item.line_charge_p) / 100);
+            if (item.line_charge_a) base += parseFloat(item.line_charge_a);
+
+            // Layer 3: Subtract Line Discounts (Optional Columns)
             let lineDisc = 0;
-            if (item.disc_p) lineDisc = Math.min(base, (base * parseFloat(item.disc_p) / 100));
-            else if (item.disc_a) lineDisc = Math.min(base, parseFloat(item.disc_a));
+            if (item.line_disc_p) lineDisc = (base * parseFloat(item.line_disc_p) / 100);
+            else if (item.line_disc_a) lineDisc = parseFloat(item.line_disc_a);
             
-            const taxable = base - lineDisc;
+            const taxableAmount = base - lineDisc;
 
-            // 1.3 Tax Calculation (CAL-01: Inclusive proportionality)
-            let taxAmt = config.taxMode === 'exclusive' ? (taxable * taxR / 100) : (taxable - (taxable / (1 + taxR / 100)));
-            let lineTotal = config.taxMode === 'exclusive' ? taxable + taxAmt : taxable;
+            // Layer 5: Calculate Tax (Layer 4 Global Discount is handled in totals)
+            let taxAmt = 0;
+            let lineTotal = 0;
 
-            // CALC-04: TDS Aggregation
+            if (config.taxMode === 'inclusive') {
+                // Inclusive Logic: Tax is inside the price
+                taxAmt = (taxableAmount * taxRate) / (100 + taxRate);
+                lineTotal = taxableAmount; 
+            } else {
+                // Exclusive Logic: Tax is on top
+                taxAmt = taxableAmount * (taxRate / 100);
+                lineTotal = taxableAmount + taxAmt;
+            }
+
+            // Layer 8: Withholding Tax (TDS)
             let tdsAmt = 0;
-            if (item.tds_p) tdsAmt = lineTotal * (Math.min(100, parseFloat(item.tds_p)) / 100);
+            if (item.tds_p) tdsAmt = lineTotal * (parseFloat(item.tds_p) / 100);
             
             const finalLinePayable = lineTotal - tdsAmt;
 
-            const computed = { taxable, taxAmt, lineTotal: finalLinePayable, tdsAmt };
-            
-            let formulaVals = {};
+            // Formula Resolving (Supports custom columns like TESTCOL1)
+            const computedContext = { taxableAmount, taxAmt, lineTotal, finalLinePayable };
+            let formulaValues = {};
             columns.forEach(c => {
-                if(c.type === 'formula') formulaVals[c.id] = resolveFormula(c.formula, item, computed);
+                if (c.type === 'formula') formulaValues[c.id] = resolveFormula(c.formula, item, computedContext);
             });
 
-            // CALC-05: Line Level Rounding
-            if (config.roundLineLevel) {
-                computed.taxAmt = Math.round(computed.taxAmt * 100) / 100;
-                computed.lineTotal = Math.round(computed.lineTotal * 100) / 100;
-            }
-
-            return { ...item, ...computed, ...formulaVals, finalLinePayable };
+            return { 
+                ...item, ...formulaValues, 
+                taxableAmount, taxAmt, lineTotal, tdsAmt, finalLinePayable 
+            };
         });
 
-        // 2. Aggregate Totals
-        const subtotal = rows.reduce((acc, r) => acc + r.taxable, 0);
+        // --- PHASE B: TOTALS & GLOBAL LAYERS ---
+        const subtotal = rows.reduce((acc, r) => acc + r.taxableAmount, 0);
         const lineTaxTotal = rows.reduce((acc, r) => acc + r.taxAmt, 0);
+
+        // Layer 4: Global Discount (Before Tax)
+        let gDiscAmtBefore = 0;
+        if (config.globalDiscountLayer === 'before_tax') {
+            gDiscAmtBefore = globalDisc.type === '%' ? (subtotal * parseFloat(globalDisc.val || 0) / 100) : parseFloat(globalDisc.val || 0);
+        }
+
+        // Layer 6: Add Extra Charges (Shipping, etc.)
+        const totalExtraCharges = charges.reduce((acc, c) => acc + parseFloat(c.val || 0), 0);
+        const taxableExtraCharges = charges.filter(c => c.taxable).reduce((acc, c) => acc + parseFloat(c.val || 0), 0);
+        const extraChargeTax = taxableExtraCharges * (parseFloat(config.defaultTaxRate) / 100);
+
+        // Calculate Intermediate Grand Total
+        let rawGrand = (subtotal - gDiscAmtBefore) + lineTaxTotal + extraChargeTax + totalExtraCharges;
+
+        // Layer 7: Global Discount (After Tax)
+        if (config.globalDiscountLayer === 'after_tax') {
+            const gDiscAmtAfter = globalDisc.type === '%' ? (rawGrand * parseFloat(globalDisc.val || 0) / 100) : parseFloat(globalDisc.val || 0);
+            rawGrand -= gDiscAmtAfter;
+        }
+
+        // Layer 8: Deduct Total TDS
         const totalTDS = rows.reduce((acc, r) => acc + (r.tdsAmt || 0), 0);
 
-        // CALC-03: Global Discount Layering
-        let discAmt = 0;
-        if (config.globalDiscountLayer === 'before_tax') {
-            discAmt = globalDisc.type === '%' ? (subtotal * (parseFloat(globalDisc.val) || 0) / 100) : parseFloat(globalDisc.val || 0);
-        }
+        // Layer 9: Rounding
+        let finalGrand = rawGrand - totalTDS;
+        if (config.rounding === 'up') finalGrand = Math.ceil(finalGrand);
+        else if (config.rounding === 'down') finalGrand = Math.floor(finalGrand);
+        else if (config.rounding === 'nearest') finalGrand = Math.round(finalGrand);
 
-        // CHG-02: Charge Calculation Layers
-        const taxableCharges = charges.filter(c => c.taxable).reduce((acc, c) => acc + (parseFloat(c.val) || 0), 0);
-        const chargeTax = taxableCharges * (parseFloat(config.defaultTaxRate) / 100);
-        const totalCharges = charges.reduce((acc, c) => acc + (parseFloat(c.val) || 0), 0);
+        const roundOffDelta = finalGrand - (rawGrand - totalTDS);
 
-        // Grand Total Calc
-        let rawGrand = (subtotal - discAmt) + lineTaxTotal + chargeTax + totalCharges;
-        
-        if (config.globalDiscountLayer === 'after_tax') {
-            const afterTaxDisc = globalDisc.type === '%' ? (rawGrand * (parseFloat(globalDisc.val) || 0) / 100) : parseFloat(globalDisc.val || 0);
-            rawGrand -= afterTaxDisc;
-        }
-
-        // CALC-06: Advanced Rounding
-        let grand = rawGrand;
-        const p = Math.pow(10, config.roundingPrecision || 0);
-        if (config.rounding === 'up') grand = Math.ceil(rawGrand * p) / p;
-        else if (config.rounding === 'down') grand = Math.floor(rawGrand * p) / p;
-        else if (config.rounding === 'nearest') grand = Math.round(rawGrand * p) / p;
-
-        // TAX-01: India IGST Support
-        let taxSummary = [];
-        if (jur.hasSplitTax) {
-            if (config.indiaTaxType === 'igst') {
-                taxSummary.push({ label: 'IGST', amt: lineTaxTotal + chargeTax });
-            } else {
-                taxSummary.push({ label: 'CGST', amt: (lineTaxTotal + chargeTax) / 2 });
-                taxSummary.push({ label: 'SGST', amt: (lineTaxTotal + chargeTax) / 2 });
-            }
-        } else {
-            taxSummary.push({ label: config.taxLabel, amt: lineTaxTotal + chargeTax });
-        }
+        const taxSummary = jur.hasSplitTax 
+            ? [{label: 'CGST', amt: (lineTaxTotal + extraChargeTax)/2}, {label: 'SGST', amt: (lineTaxTotal + extraChargeTax)/2}] 
+            : [{label: config.taxLabel, amt: lineTaxTotal + extraChargeTax}];
 
         return { 
-            rows, subtotal, taxTotal: lineTaxTotal + chargeTax, totalTDS, taxSummary, 
-            grandTotal: grand, payableAfterTDS: grand - totalTDS, roundOff: grand - rawGrand, 
-            jur, words: amountToWords(grand, jur) 
+            rows, subtotal, taxTotal: lineTaxTotal + extraChargeTax, taxSummary, 
+            grandTotal: finalGrand, roundOff: roundOffDelta, totalTDS,
+            jur, words: amountToWords(finalGrand, jur) 
         };
     }, [items, config, globalDisc, charges, columns]);
 
@@ -308,15 +311,15 @@ export default function ShbEnterpriseV32() {
                                     <tr key={idx} className="item-row">
                                         {columns.map((c, ci) => (
                                             <td key={ci} className={`${!c.visible ? 'shb-hidden' : ''} ${c.private ? 'shb-private' : ''}`} style={styles.td}>
-                                                <textarea 
-                                                    style={{...styles.ghostInp, minHeight:35}} 
-                                                    value={item[c.id] || ''} 
-                                                    readOnly={c.type==='formula'}
-                                                    onKeyDown={(e) => { if(c.type==='number' && !/[0-9.]|Backspace|Tab|Enter|Arrow/.test(e.key)) e.preventDefault(); }}
-                                                    onChange={e => { const ni=[...items]; ni[idx][c.id]=e.target.value; setItems(ni); }} 
-                                                    onInput={autoGrow}
-                                                />
-                                            </td>
+    <textarea 
+        style={{...styles.ghostInp, minHeight:35}} 
+        // Logic: If it's the Line Total column, show the final payable
+        value={c.id === 'line_total' ? item.lineTotal.toFixed(engine.jur.decimals) : (item[c.id] || '')} 
+        readOnly={c.id === 'line_total' || c.type === 'formula'}
+        onChange={e => handleItemChange(idx, c.id, e.target.value, c.type)} 
+        onInput={autoGrow}
+    />
+</td>
                                         ))}
                                         <td style={{...styles.td, textAlign:'right', fontWeight:'bold'}}>{item.lineTotal.toFixed(engine.jur.decimals)}</td>
                                         <td className="no-print"><button onClick={()=>setItems(items.filter((_,i)=>i!==idx))} style={{color:'red', border:'none', background:'none'}}>×</button></td>
