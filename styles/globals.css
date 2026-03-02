@@ -1,3 +1,7 @@
+/* 1. TAILWIND DIRECTIVES (Must be at the top) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 /* RESET FOR NEXT.JS */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 img { max-width: 100%; height: auto; display: block; }
