@@ -1,200 +1,160 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { createClient } from '@supabase/supabase-js'; // Ensure supabase is initialized
-import { InvoiceLogic, InvoiceValidator, FormulaEngine } from '../../engine-data/logic';
+import React, { useState, useMemo } from 'react';
+import { InvoiceEngine, numberToWords } from '../../engine-data/logic';
 import { InvoiceStyles } from '../../engine-data/styles';
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
-export default function InvoiceGenerator() {
-  const [mode, setMode] = useState('DRAFT'); // DRAFT, FINAL, CANCELLED
-  const [invoiceData, setInvoiceData] = useState({
-    invoiceNumber: 'INV-' + Date.now(),
-    items: [{ qty: 1, unitPrice: 0, taxRate: 0, description: 'New Item' }],
-    columns: [
-      { key: 'description', label: 'Description', visible: true, isPrivate: false },
-      { key: 'qty', label: 'Qty', visible: true, isPrivate: false },
-      { key: 'unitPrice', label: 'Unit Price', visible: true, isPrivate: false },
-      { key: 'taxRate', label: 'Tax %', visible: true, isPrivate: false },
-      { key: 'lineTotal', label: 'Total', visible: true, isPrivate: false },
-    ],
-    config: { roundingMode: 'HALF_EVEN', taxInclusive: false },
-    globalDiscount: { value: 0, type: 'percent', layer: 'before_tax' },
+export default function EnterpriseInvoice() {
+  const [status, setStatus] = useState('DRAFT'); // DRAFT, FINAL, CANCELLED
+  const [invoice, setInvoice] = useState({
+    invoiceNo: "INV-001",
+    date: new Date().toISOString().split('T')[0],
+    company: { name: "", address: "", taxId: "" },
+    customer: { name: "", address: "", taxId: "" },
+    items: [{ id: 1, description: "", qty: 1, unitPrice: 0, taxRate: 0 }],
+    globalDiscount: { value: 0, type: 'fixed', layer: 'before_tax' },
     extraCharges: [],
     tdsRate: 0,
-    payments: { received: 0, balance: 0 }
+    config: { roundingMode: 'HALF_EVEN', precision: 2, taxInclusive: false }
   });
 
-  // Calculate Totals using Logic Engine
   const totals = useMemo(() => {
-    const engine = new InvoiceLogic(invoiceData.config);
-    return engine.calculate(
-      invoiceData.items, 
-      invoiceData.globalDiscount, 
-      invoiceData.extraCharges, 
-      invoiceData.tdsRate
-    );
-  }, [invoiceData]);
+    const engine = new InvoiceEngine(invoice.config);
+    return engine.calculate(invoice.items, invoice.globalDiscount, invoice.extraCharges, invoice.tdsRate);
+  }, [invoice]);
 
-  const errors = InvoiceValidator.validate(invoiceData);
-
-  // Supabase Persistence: Save Invoice
-  const saveToSupabase = async (status = 'DRAFT') => {
-    if (status === 'FINAL' && errors.length > 0) return alert("Fix errors before finalizing");
-    
-    const { data, error } = await supabase
-      .from('invoices')
-      .upsert({ 
-        invoice_number: invoiceData.invoiceNumber,
-        content: invoiceData,
-        grand_total: totals.grandTotal,
-        status: status,
-        updated_at: new Date()
-      });
-
-    if (!error) {
-      setMode(status);
-      alert(`Invoice saved as ${status}`);
-    }
-  };
+  const isLocked = status !== 'DRAFT';
 
   return (
     <div className={InvoiceStyles.canvas}>
-      <style>{InvoiceStyles.printCSS}</style>
-
-      <div className="flex max-w-[1400px] mx-auto">
-        {/* Left: Invoice Canvas */}
-        <div className="flex-1 overflow-x-auto pb-20">
-          <div className={`a4-page invoice-container relative ${mode === 'CANCELLED' ? 'opacity-50' : ''}`}>
-            {mode === 'CANCELLED' && <div className="watermark">CANCELLED</div>}
-            
-            <header className="flex justify-between items-start mb-12">
-              <div>
-                <h1 className="text-4xl font-black text-slate-800 tracking-tighter">TAX INVOICE</h1>
-                <input 
-                  className="mt-2 text-lg text-slate-500 border-none outline-none"
-                  value={invoiceData.invoiceNumber}
-                  onChange={e => setInvoiceData({...invoiceData, invoiceNumber: e.target.value})}
-                  disabled={mode !== 'DRAFT'}
-                />
-              </div>
-              <div className="text-right">
-                <div className="h-16 w-40 bg-slate-100 flex items-center justify-center border-2 border-dashed rounded italic text-slate-400">
-                  Upload Logo
-                </div>
-              </div>
-            </header>
-
-            {/* Dynamic Items Table */}
-            <table className="w-full mb-8">
-              <thead className={InvoiceStyles.tableHeader}>
-                <tr>
-                  {invoiceData.columns.filter(c => c.visible).map(col => (
-                    <th key={col.key} className="p-3 text-left">{col.label}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {invoiceData.items.map((item, idx) => (
-                  <tr key={idx} className="group">
-                    {invoiceData.columns.filter(c => c.visible).map(col => (
-                      <td key={col.key} className={`${InvoiceStyles.cell} ${col.isPrivate ? 'bg-amber-50 private-column' : ''}`}>
-                        <input 
-                          className={InvoiceStyles.input}
-                          value={item[col.key]}
-                          onChange={(e) => {
-                            if (mode !== 'DRAFT') return;
-                            const newItems = [...invoiceData.items];
-                            newItems[idx][col.key] = e.target.value;
-                            setInvoiceData({...invoiceData, items: newItems});
-                          }}
-                          disabled={mode !== 'DRAFT'}
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <button 
-              className="no-print mb-8 text-blue-600 font-bold text-sm"
-              onClick={() => setInvoiceData({...invoiceData, items: [...invoiceData.items, {qty: 1, unitPrice: 0, taxRate: 0}]})}
-            >+ Add Line Item</button>
-
-            {/* Summary Grid */}
-            <div className="flex justify-end pt-8 border-t-2 border-slate-900">
-              <div className="w-80 space-y-3">
-                <div className="flex justify-between text-slate-600">
-                  <span>Subtotal</span>
-                  <span>{totals.subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-slate-600">
-                  <span>Tax Amount</span>
-                  <span>{totals.totalTax.toFixed(2)}</span>
-                </div>
-                {totals.tdsAmount > 0 && (
-                  <div className="flex justify-between text-red-600">
-                    <span>TDS Deduction</span>
-                    <span>-{totals.tdsAmount.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between border-t border-slate-200 pt-3">
-                  <span className="font-bold">GRAND TOTAL</span>
-                  <span className={InvoiceStyles.grandTotal}>{totals.grandTotal.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* 🛠️ Floating Toolbar */}
+      <div className="w-[210mm] bg-white mb-4 p-4 rounded-xl flex justify-between items-center no-print shadow-lg">
+        <div className="flex gap-3">
+          <button 
+            onClick={() => setStatus('FINAL')} 
+            className="bg-blue-600 text-white px-4 py-2 rounded font-bold text-xs"
+            disabled={isLocked}
+          >FINALIZE & LOCK</button>
+          <button onClick={() => window.print()} className="bg-slate-100 px-4 py-2 rounded font-bold text-xs">PRINT PDF</button>
         </div>
+        <span className="text-[10px] font-black uppercase text-slate-400">Status: {status}</span>
+      </div>
 
-        {/* Right: Enterprise Sidebar */}
-        <aside className={InvoiceStyles.sidebar}>
-          <h2 className="font-black uppercase text-xs tracking-widest text-slate-400">Control Panel</h2>
-          
-          <div className="space-y-4">
-            <button 
-              onClick={() => window.print()}
-              className="w-full bg-slate-900 text-white p-3 rounded font-bold hover:bg-black transition"
-            >Print / Export PDF</button>
-            
-            <button 
-              onClick={() => saveToSupabase('FINAL')}
-              className="w-full bg-blue-600 text-white p-3 rounded font-bold hover:bg-blue-700 transition"
-              disabled={mode === 'FINAL'}
-            >Finalize & Lock</button>
+      {/* 📄 The A4 Invoice */}
+      <div className={InvoiceStyles.page}>
+        {status === 'CANCELLED' && <div className={InvoiceStyles.watermark}>CANCELLED</div>}
 
-            {mode === 'FINAL' && (
-              <button 
-                onClick={() => saveToSupabase('CANCELLED')}
-                className="w-full bg-red-100 text-red-600 p-3 rounded font-bold"
-              >Mark as Cancelled</button>
-            )}
-          </div>
-
-          <div className="pt-6 border-t border-slate-100">
-            <h3 className="font-bold text-sm mb-4">Calculation Config</h3>
-            <label className="flex items-center space-x-2 text-sm">
+        <header className="flex justify-between items-start mb-16">
+          <div className="w-2/3">
+            <h1 className="text-4xl font-black text-slate-900 italic mb-6">TAX INVOICE</h1>
+            <div className="space-y-1">
               <input 
-                type="checkbox" 
-                checked={invoiceData.config.taxInclusive}
-                onChange={e => setInvoiceData({
-                  ...invoiceData, 
-                  config: {...invoiceData.config, taxInclusive: e.target.checked}
-                })}
+                placeholder="YOUR COMPANY NAME" 
+                className={`${InvoiceStyles.inputClean} font-bold text-lg`}
+                onChange={e => setInvoice({...invoice, company: {...invoice.company, name: e.target.value}})}
+                disabled={isLocked}
               />
-              <span>Tax Inclusive Mode</span>
-            </label>
-          </div>
-
-          {errors.length > 0 && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded text-red-700 text-xs">
-              <p className="font-bold mb-1">Validation Blockers:</p>
-              <ul className="list-disc pl-4">
-                {errors.map((e, i) => <li key={i}>{e}</li>)}
-              </ul>
+              <textarea 
+                placeholder="Address & Tax ID" 
+                className={`${InvoiceStyles.inputClean} text-slate-500 text-xs h-20`}
+                onChange={e => setInvoice({...invoice, company: {...invoice.company, address: e.target.value}})}
+                disabled={isLocked}
+              />
             </div>
-          )}
-        </aside>
+          </div>
+          <div className="text-right">
+             <div className="w-32 h-16 border-2 border-dashed border-slate-200 flex items-center justify-center text-[10px] text-slate-300 font-bold">LOGO</div>
+          </div>
+        </header>
+
+        <section className="grid grid-cols-2 gap-10 mb-12 py-8 border-y border-slate-100">
+           <div className="text-sm space-y-2">
+              <div className="flex justify-between"><span className="text-slate-400 font-bold text-[10px] uppercase">Invoice No:</span> <input className="font-bold border-none p-0 w-32 text-right" defaultValue={invoice.invoiceNo} disabled={isLocked} /></div>
+              <div className="flex justify-between"><span className="text-slate-400 font-bold text-[10px] uppercase">Date:</span> <input type="date" className="border-none p-0 w-32 text-right" defaultValue={invoice.date} disabled={isLocked} /></div>
+           </div>
+           <div className="text-sm">
+              <h5 className="text-[10px] font-black text-slate-400 uppercase mb-2">Bill To:</h5>
+              <input placeholder="Customer Name" className="font-bold block w-full border-none p-0 mb-1" disabled={isLocked} />
+              <textarea placeholder="Customer Address & Tax ID" className="text-slate-500 text-xs w-full border-none p-0 h-12" disabled={isLocked} />
+           </div>
+        </section>
+
+        <table className="w-full mb-10">
+          <thead className={InvoiceStyles.tableHead}>
+            <tr>
+              <th className="p-3 text-left w-12">SN</th>
+              <th className="p-3 text-left">Description</th>
+              <th className="p-3 text-right">Qty</th>
+              <th className="p-3 text-right">Price</th>
+              <th className="p-3 text-right">Tax %</th>
+              <th className="p-3 text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {totals.items.map((item, idx) => (
+              <tr key={idx}>
+                <td className={InvoiceStyles.tableCell}>{idx + 1}</td>
+                <td className={InvoiceStyles.tableCell}>
+                  <input 
+                    className={InvoiceStyles.inputClean} 
+                    placeholder="Item details..." 
+                    onChange={e => {
+                      const newItems = [...invoice.items];
+                      newItems[idx].description = e.target.value;
+                      setInvoice({...invoice, items: newItems});
+                    }}
+                    disabled={isLocked}
+                  />
+                </td>
+                <td className={`${InvoiceStyles.tableCell} text-right`}>
+                  <input 
+                    type="number" 
+                    className={`${InvoiceStyles.inputClean} text-right`} 
+                    defaultValue={item.qty} 
+                    onChange={e => {
+                      const newItems = [...invoice.items];
+                      newItems[idx].qty = parseFloat(e.target.value);
+                      setInvoice({...invoice, items: newItems});
+                    }}
+                    disabled={isLocked}
+                  />
+                </td>
+                <td className={`${InvoiceStyles.tableCell} text-right font-mono`}>
+                  <input 
+                    type="number" 
+                    className={`${InvoiceStyles.inputClean} text-right`} 
+                    defaultValue={item.unitPrice} 
+                    onChange={e => {
+                      const newItems = [...invoice.items];
+                      newItems[idx].unitPrice = parseFloat(e.target.value);
+                      setInvoice({...invoice, items: newItems});
+                    }}
+                    disabled={isLocked}
+                  />
+                </td>
+                <td className={`${InvoiceStyles.tableCell} text-right text-slate-400`}>{item.taxRate}%</td>
+                <td className={`${InvoiceStyles.tableCell} text-right font-bold`}>{item.lineTotal.toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {!isLocked && (
+          <button 
+            className="no-print text-blue-600 font-bold text-xs mb-10"
+            onClick={() => setInvoice({...invoice, items: [...invoice.items, {id: Date.now(), description: "", qty: 1, unitPrice: 0, taxRate: 0}]})}
+          >+ ADD LINE</button>
+        )}
+
+        <div className="mt-auto flex justify-between items-end border-t-2 border-slate-900 pt-10">
+           <div className="w-1/2">
+              <p className="text-[10px] font-black text-slate-400 uppercase mb-4">Amount in Words</p>
+              <p className="text-xs font-bold text-slate-600 italic leading-relaxed">{numberToWords(totals.grandTotal)}</p>
+           </div>
+           <div className="w-1/3 space-y-2">
+              <div className="flex justify-between text-xs font-bold text-slate-400"><span>Subtotal:</span> <span>{totals.subtotal.toFixed(2)}</span></div>
+              <div className="flex justify-between text-xs font-bold text-slate-400"><span>Total Tax:</span> <span>{totals.totalTax.toFixed(2)}</span></div>
+              <div className="flex justify-between text-2xl font-black text-slate-900 border-t pt-4"><span>TOTAL:</span> <span>{totals.grandTotal.toFixed(2)}</span></div>
+           </div>
+        </div>
       </div>
     </div>
   );

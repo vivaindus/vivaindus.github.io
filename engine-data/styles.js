@@ -1,38 +1,20 @@
 export const InvoiceStyles = {
-  // Enterprise A4 Print Logic
-  printCSS: `
-    @media print {
-      body { background: white !important; margin: 0; padding: 0; }
-      .no-print { display: none !important; }
-      .invoice-container { 
-        box-shadow: none !important; 
-        margin: 0 !important; 
-        width: 100% !important; 
-        padding: 0 !important;
-      }
-      .private-column { display: none !important; }
-      thead { display: table-header-group; }
-      tr { page-break-inside: avoid; }
-      .watermark {
-        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 100px; color: rgba(200, 200, 200, 0.2); pointer-events: none; z-index: 999;
-      }
-    }
-    .a4-page {
-      width: 210mm;
-      min-height: 297mm;
-      padding: 20mm;
-      margin: 10px auto;
-      background: white;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-  `,
-
-  // Tailwind Class Presets
-  canvas: "bg-gray-100 min-h-screen py-10 font-sans antialiased",
-  tableHeader: "bg-slate-50 border-y border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-600",
-  cell: "px-4 py-3 text-sm border-b border-slate-100",
-  input: "w-full border-none focus:ring-2 focus:ring-blue-500 rounded p-1 text-sm",
-  grandTotal: "text-3xl font-black text-slate-900 mt-4",
-  sidebar: "w-80 bg-white border-l border-slate-200 p-6 space-y-6 no-print overflow-y-auto h-screen sticky top-0"
+  // A4 Layout container
+  canvas: "bg-slate-900 min-h-screen py-10 flex flex-col items-center no-print",
+  page: "relative w-[210mm] min-h-[297mm] bg-white shadow-2xl p-[20mm] flex flex-col",
+  
+  // Table styles
+  tableHead: "bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest",
+  tableCell: "border-b border-slate-100 p-3 text-xs",
+  
+  // Input styles
+  inputClean: "border-none p-0 focus:ring-0 w-full bg-transparent",
+  inputField: "border border-slate-200 rounded p-2 text-sm focus:border-blue-500 outline-none",
+  
+  // Totals Section
+  grandTotalBox: "border-t-4 border-slate-900 pt-4 mt-4 text-right",
+  
+  // Utilities
+  printOnly: "@media print { .no-print { display: none !important; } }",
+  watermark: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-45 text-[100px] font-black text-slate-100 pointer-events-none select-none z-0"
 };

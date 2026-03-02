@@ -1,149 +1,112 @@
 import Decimal from 'decimal.js';
 
-/**
- * 1. FORMULA ENGINE (AST-lite)
- * Resolves column dependencies using Topological Sorting
- */
-export const FormulaEngine = {
-  // Simple regex parser to find column keys (Uppercase letters)
-  getDependencies: (formula) => formula.match(/[A-Z_]{2,}/g) || [],
-
-  resolveCalculationOrder: (columns) => {
-    const sorted = [];
-    const visited = new Set();
-    const temp = new Set();
-
-    const visit = (col) => {
-      if (temp.has(col.key)) throw new Error(`Cycle detected at ${col.key}`);
-      if (!visited.has(col.key)) {
-        temp.add(col.key);
-        const deps = FormulaEngine.getDependencies(col.formula || '');
-        deps.forEach(depKey => {
-          const depCol = columns.find(c => c.key === depKey);
-          if (depCol) visit(depCol);
-        });
-        visited.add(col.key);
-        temp.delete(col.key);
-        sorted.push(col);
-      }
-    };
-
-    columns.forEach(col => visit(col));
-    return sorted;
-  }
-};
-
-/**
- * 2. DETERMINISTIC CALCULATION PIPELINE
- * Strictly follows the 10-step sequence requested.
- */
-export class InvoiceLogic {
+export class InvoiceEngine {
   constructor(config) {
     this.config = {
-      roundingMode: config.roundingMode || 'HALF_EVEN', // Banker's Rounding
+      roundingMode: config.roundingMode || 'HALF_EVEN',
       precision: config.precision || 2,
-      taxInclusive: config.taxInclusive || false,
-      ...config
+      taxInclusive: config.taxInclusive || false
     };
   }
 
   calculate(items, globalDiscount, extraCharges, tdsRate) {
     let subtotalTaxable = new Decimal(0);
-    let totalTaxAmount = new Decimal(0);
-    let totalDiscount = new Decimal(0);
+    let totalTax = new Decimal(0);
+    let lineDiscountsTotal = new Decimal(0);
 
     const processedItems = items.map(item => {
       // 1. Base = Qty × Unit Price
-      let base = new Decimal(item.qty || 0).mul(item.unitPrice || 0);
+      const base = new Decimal(item.qty || 0).mul(item.unitPrice || 0);
 
-      // 2. Apply Line Charges
-      let lineCharge = item.chargeType === 'percent' 
+      // 2. Line Charges
+      const lineCharge = item.chargeType === 'percent' 
         ? base.mul(new Decimal(item.chargeValue || 0).div(100)) 
         : new Decimal(item.chargeValue || 0);
-      let afterCharge = base.plus(lineCharge);
+      const afterCharge = base.plus(lineCharge);
 
-      // 3. Apply Line Discounts
-      let lineDiscount = item.discountType === 'percent'
+      // 3. Line Discounts
+      const lineDisc = item.discountType === 'percent'
         ? afterCharge.mul(new Decimal(item.discountValue || 0).div(100))
         : new Decimal(item.discountValue || 0);
-      let netBeforeGlobal = afterCharge.minus(lineDiscount);
+      const netBeforeGlobal = afterCharge.minus(lineDisc);
+      lineDiscountsTotal = lineDiscountsTotal.plus(lineDisc);
 
-      // 4. Global Discount (Before Tax Layer)
+      // 4. Global Discount (Before Tax)
       let preTaxGlobal = new Decimal(0);
       if (globalDiscount.layer === 'before_tax') {
-        preTaxGlobal = globalDiscount.type === 'percent' 
-          ? netBeforeGlobal.mul(new Decimal(globalDiscount.value).div(100))
-          : new Decimal(globalDiscount.value).div(items.length);
+        preTaxGlobal = globalDiscount.type === 'percent'
+          ? netBeforeGlobal.mul(new Decimal(globalDiscount.value || 0).div(100))
+          : new Decimal(globalDiscount.value || 0).div(items.length);
       }
-      let taxableAmount = netBeforeGlobal.minus(preTaxGlobal);
+      const taxableAmount = netBeforeGlobal.minus(preTaxGlobal);
 
       // 5. Tax Calculation
-      let taxAmount = new Decimal(0);
-      const taxRate = new Decimal(item.taxRate || 0).div(100);
+      const rate = new Decimal(item.taxRate || 0).div(100);
+      let taxAmt, netAmt;
       if (this.config.taxInclusive) {
-        // Tax = Amount - (Amount / (1 + Rate))
-        taxAmount = taxableAmount.minus(taxableAmount.div(taxRate.plus(1)));
-        taxableAmount = taxableAmount.minus(taxAmount);
+        taxAmt = taxableAmount.minus(taxableAmount.div(rate.plus(1)));
+        netAmt = taxableAmount.minus(taxAmt);
       } else {
-        taxAmount = taxableAmount.mul(taxRate);
+        taxAmt = taxableAmount.mul(rate);
+        netAmt = taxableAmount;
       }
 
-      const lineTotal = taxableAmount.plus(taxAmount);
-      
-      subtotalTaxable = subtotalTaxable.plus(taxableAmount);
-      totalTaxAmount = totalTaxAmount.plus(taxAmount);
-      totalDiscount = totalDiscount.plus(lineDiscount).plus(preTaxGlobal);
+      subtotalTaxable = subtotalTaxable.plus(netAmt);
+      totalTax = totalTax.plus(taxAmt);
 
-      return { ...item, base, taxableAmount, taxAmount, lineTotal };
+      return { 
+        ...item, 
+        taxAmount: taxAmt.toNumber(), 
+        lineTotal: netAmt.plus(taxAmt).toNumber() 
+      };
     });
 
-    // 6. TDS / Withholding
-    let runningTotal = subtotalTaxable.plus(totalTaxAmount);
+    // 6. TDS Deduction
+    let runningTotal = subtotalTaxable.plus(totalTax);
     const tdsAmount = runningTotal.mul(new Decimal(tdsRate || 0).div(100));
-    runningTotal = runningTotal.minus(tdsAmount);
 
-    // 7. Extra Charges (Before/After Tax handled by placement)
-    extraCharges.forEach(c => {
-      runningTotal = runningTotal.plus(new Decimal(c.value || 0));
-    });
+    // 7. Extra Charges
+    const chargesTotal = extraCharges.reduce((acc, c) => acc.plus(new Decimal(c.value || 0)), new Decimal(0));
+    runningTotal = runningTotal.plus(chargesTotal);
 
-    // 8. Global Discount (After Tax Layer)
+    // 8. Global Discount (After Tax)
+    let postTaxGlobal = new Decimal(0);
     if (globalDiscount.layer === 'after_tax') {
-      const postTaxDisc = globalDiscount.type === 'percent'
-        ? runningTotal.mul(new Decimal(globalDiscount.value).div(100))
-        : new Decimal(globalDiscount.value);
-      runningTotal = runningTotal.minus(postTaxDisc);
-      totalDiscount = totalDiscount.plus(postTaxDisc);
+      postTaxGlobal = globalDiscount.type === 'percent'
+        ? runningTotal.mul(new Decimal(globalDiscount.value || 0).div(100))
+        : new Decimal(globalDiscount.value || 0);
     }
 
-    // 9. Apply Rounding
+    // 9. Rounding Adjustment
+    const beforeRounding = runningTotal.minus(tdsAmount).minus(postTaxGlobal);
     const rm = this.config.roundingMode === 'HALF_EVEN' ? Decimal.ROUND_HALF_EVEN : Decimal.ROUND_HALF_UP;
-    const finalGrandTotal = runningTotal.toDecimalPlaces(this.config.precision, rm);
+    const grandTotal = beforeRounding.toDecimalPlaces(this.config.precision, rm);
+    const roundingAdj = grandTotal.minus(beforeRounding);
 
-    // 10. Produce Final Grand Total
+    // 10. Grand Total
     return {
-      processedItems,
+      items: processedItems,
       subtotal: subtotalTaxable.toNumber(),
-      totalTax: totalTaxAmount.toNumber(),
-      totalDiscount: totalDiscount.toNumber(),
+      totalTax: totalTax.toNumber(),
       tdsAmount: tdsAmount.toNumber(),
-      grandTotal: finalGrandTotal.toNumber(),
-      payable: finalGrandTotal.toNumber()
+      roundingAdjustment: roundingAdj.toNumber(),
+      grandTotal: grandTotal.toNumber()
     };
   }
 }
 
-/**
- * 3. VALIDATION ENGINE
- */
-export const InvoiceValidator = {
-  validate: (invoice) => {
-    const errors = [];
-    if (!invoice.items || invoice.items.length === 0) errors.push("At least one line item is required.");
-    invoice.items.forEach((item, i) => {
-      if (item.qty < 0) errors.push(`Line ${i+1}: Quantity cannot be negative.`);
-      if (item.discountValue > (item.qty * item.unitPrice)) errors.push(`Line ${i+1}: Discount exceeds base price.`);
-    });
-    return errors;
-  }
+export const numberToWords = (n) => {
+  if (n === 0) return "ZERO";
+  const s = ['','ONE ','TWO ','THREE ','FOUR ','FIVE ','SIX ','SEVEN ','EIGHT ','NINE ','TEN ','ELEVEN ','TWELVE ','THIRTEEN ','FOURTEEN ','FIFTEEN ','SIXTEEN ','SEVENTEEN ','EIGHTEEN ','NINETEEN '];
+  const t = ['', '', 'TWENTY','THIRTY','FORTY','FIFTY','SIXTY','SEVENTY','EIGHTY','NINETY'];
+  const num = Math.floor(n).toString().padStart(9, '0');
+  const gn = (idx, label) => {
+    const v = parseInt(num.substr(idx, 2));
+    if (v === 0) return '';
+    return (s[v] || t[num[idx]] + ' ' + s[num[idx+1]]) + label + ' ';
+  };
+  let res = gn(0, 'CRORE ') + gn(2, 'LAKH ') + gn(4, 'THOUSAND ') + gn(6, 'HUNDRED ');
+  const last2 = parseInt(num.substr(7, 2));
+  if (last2 > 0) res += (s[last2] || t[num[7]] + ' ' + s[num[8]]);
+  return res.trim() + ' ONLY';
 };
