@@ -13,10 +13,10 @@ export class InvoiceEngine {
     let subtotalTaxable = new Decimal(0);
     let totalTax = new Decimal(0);
     let lineDiscountsSum = new Decimal(0);
-    let totalPreTaxGlobal = new Decimal(0); // Scope initialized outside loop
+    let totalPreTaxGlobal = new Decimal(0); 
     const taxGroups = {};
 
-    const processedItems = (invoice.items || []).map(item => {
+    const items = (invoice.items || []).map(item => {
       let base = new Decimal(item.qty || 0).mul(item.unitPrice || 0);
       let lineCharge = item.chargeType === 'percent' 
         ? base.mul(new Decimal(item.chargeValue || 0).div(100)) 
@@ -29,7 +29,6 @@ export class InvoiceEngine {
       let netBeforeGlobal = afterCharge.minus(lineDisc);
       lineDiscountsSum = lineDiscountsSum.plus(lineDisc);
 
-      // Fix: Declare scoped variable
       let itemPreTaxGlobal = new Decimal(0);
       if (invoice.globalDiscount?.layer === 'before_tax') {
         itemPreTaxGlobal = invoice.globalDiscount.type === 'percent'
@@ -80,7 +79,7 @@ export class InvoiceEngine {
     const roundingAdj = grandTotal.minus(beforeRounding);
 
     return {
-      items: processedItems,
+      items,
       subtotal: subtotalTaxable.toNumber(),
       totalTax: totalTax.toNumber(),
       taxSummary: Object.entries(taxGroups).map(([rate, amt]) => ({ rate, amt: amt.toNumber() })),
