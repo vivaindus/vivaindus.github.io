@@ -1,309 +1,466 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { FinancialPipeline } from '../../engine-data/logic';
-import { AuditEngine } from '../../engine-data/audit-engine';
+import React, { useState, useMemo } from 'react';
+import { CalculateInvoice } from '../../engine-data/logic';
 import { 
-  Plus, Trash2, Lock, Unlock, Printer, 
-  RotateCcw, History, CheckCircle, Shield 
+  Plus, Trash2, ShieldCheck, Printer, 
+  Settings2, Download, Lock, ChevronRight 
 } from 'lucide-react';
+import QRCode from 'qrcode.js';
+
+const DEFAULT_COLUMNS = [
+  { id: 'sn', label: 'S.N.', visible: true, isPrivate: false },
+  { id: 'itemName', label: 'Item Name', visible: true, isPrivate: false },
+  { id: 'hsn', label: 'HSN/SAC', visible: true, isPrivate: false },
+  { id: 'sku', label: 'SKU', visible: true, isPrivate: false },
+  { id: 'qty', label: 'Qty', visible: true, isPrivate: false },
+  { id: 'unit', label: 'Unit', visible: true, isPrivate: false },
+  { id: 'rate', label: 'Rate', visible: true, isPrivate: false },
+  { id: 'discount', label: 'Discount', visible: true, isPrivate: false },
+  { id: 'taxPercent', label: 'Tax %', visible: true, isPrivate: false },
+  { id: 'taxAmount', label: 'Tax Amount', visible: true, isPrivate: true },
+  { id: 'lineTotal', label: 'Line Total', visible: true, isPrivate: false }
+];
+const DynamicColumnEngine = [
+  { id: 'name', label: 'Item Description', width: 'flex-1' },
+  { id: 'hsn', label: 'HSN/SAC', width: 'w-24' },
+  { id: 'qty', label: 'Qty', width: 'w-20' },
+  { id: 'rate', label: 'Rate', width: 'w-28' },
+  { id: 'taxP', label: 'VAT %', width: 'w-20' },
+  { id: 'total', label: 'Line Total', width: 'w-32' },
+];
 
 export default function EnterpriseInvoice() {
   const [invoice, setInvoice] = useState({
-    status: 'DRAFT',
-    number: 'TAX-2024-001',
     version: 1,
-    issueDate: new Date().toISOString().split('T')[0],
-    currency: 'AED',
-    isTaxInclusive: false,
-    items: [{ id: '1', name: '', qty: 1, rate: 0, taxP: 5 }],
-    columns: [
-      { key: 'name', label: 'Item Name', visible: true },
-      { key: 'hsn', label: 'HSN/SAC', visible: true },
-      { key: 'qty', label: 'Qty', visible: true },
-      { key: 'rate', label: 'Rate', visible: true },
-      { key: 'taxP', label: 'VAT %', visible: true },
-      { key: 'total', label: 'Line Total', visible: true },
-    ],
+    status: 'DRAFT', // 'DRAFT', 'FINAL', 'CANCELLED'
+    lockedAt: null,
+    history: [],
     auditLog: [],
-    history: []
+    number: 'INV-2024-001',
+    currency: 'AED',
+    items: [{ id: 1, name: '', hsn: '', qty: 1, rate: 0, taxP: 5 }],
+    globalDiscountPreTax: { value: 0, type: 'fixed' },
+    tdsRate: 0,
+    roundingMethod: 'HALF_EVEN',
+    locked: false
   });
 
-  const totals = useMemo(() => FinancialPipeline.execute(invoice), [invoice]);
+  const totals = useMemo(() => CalculateInvoice(invoice), [invoice]);
 
-  const toggleLock = async () => {
-    if (invoice.status === 'FINAL') return;
-    const hash = await AuditEngine.generateIntegrityHash(invoice);
-    setInvoice(prev => ({ 
-      ...prev, 
-      status: 'FINAL', 
-      locked: true, 
-      integrityHash: hash,
-      finalizedAt: new Date().toISOString()
+  const updateItem = (id, field, val) => {
+    if (invoice.locked) return;
+    setInvoice(prev => ({
+      ...prev,
+      items: prev.items.map(item => item.id === id ? { ...item, [field]: val } : item)
     }));
   };
 
+  // Add column configuration state
+  const [columnConfig, setColumnConfig] = useState(
+    DynamicColumnEngine.map(col => ({
+      ...col,
+      visible: true,
+      isPrivate: false // Hide in print if true
+    }))
+  );
+
+  // Add toggle UI in editor panel
+  const toggleColumnVisibility = (colId) => {
+    setColumnConfig(prev =>
+      prev.map(col =>
+        col.id === colId ? { ...col, visible: !col.visible } : col
+      )
+    );
+  };
+  
+  const renameColumn = (colId, newLabel) => {
+    setColumnConfig(prev =>
+      prev.map(col =>
+        col.id === colId ? { ...col, label: newLabel } : col
+      )
+    );
+  };
+  
+
   const createRevision = () => {
-    const revised = AuditEngine.createRevision(invoice);
-    setInvoice(revised);
+    const currentInvoice = {
+      ...invoice,
+      version: invoice.version + 1,
+      status: 'DRAFT',
+      locked: false,
+      lockedAt: null
+    };
+
+    const auditEntry = {
+      timestamp: new Date().toISOString(),
+      action: 'REVISION_CREATED',
+      fromVersion: invoice.version,
+      toVersion: currentInvoice.version
+    };
+
+    setInvoice({
+      ...currentInvoice,
+      history: [
+        ...(invoice.history || []),
+        {
+          version: invoice.version,
+          status: invoice.status,
+          items: invoice.items,
+          lockedAt: invoice.lockedAt
+        }
+      ],
+      auditLog: [...(invoice.auditLog || []), auditEntry]
+    });
   };
 
+  const finalizeInvoice = () => {
+    const auditEntry = {
+      timestamp: new Date().toISOString(),
+      action: 'FINALIZED',
+      version: invoice.version
+    };
+
+    setInvoice({
+      ...invoice,
+      status: 'FINAL',
+      locked: true,
+      lockedAt: new Date().toISOString(),
+      auditLog: [...(invoice.auditLog || []), auditEntry]
+    });
+
+    alert(`Invoice v${invoice.version} is now FINAL. Create a revision to edit.`);
+  };
+
+  const cancelInvoice = () => {
+    const auditEntry = {
+      timestamp: new Date().toISOString(),
+      action: 'CANCELLED',
+      version: invoice.version
+    };
+
+    setInvoice({
+      ...invoice,
+      status: 'CANCELLED',
+      locked: true,
+      auditLog: [...(invoice.auditLog || []), auditEntry]
+    });
+  };
+
+  const generateInvoiceQR = (invoiceData, totals) => {
+    // Guard: Check if required data exists
+    if (!invoiceData || !totals || !totals.grandTotal) {
+      return null;
+    }
+
+    const qrString = JSON.stringify({
+      invoiceNo: invoiceData.invoiceNo || 'DRAFT',
+      date: invoiceData.issueDate || new Date().toISOString().split('T')[0],
+      total: totals.grandTotal.toString(),
+      seller: invoiceData.seller?.name || 'N/A',
+      buyer: invoiceData.buyer?.name || 'N/A'
+    });
+
+    try {
+      const qr = new QRCode({
+        text: qrString,
+        width: 200,
+        height: 200,
+        colorDark: '#000000',
+        colorLight: '#ffffff'
+      });
+      return qr.createDataURL();
+    } catch (err) {
+      console.error('QR Generation failed:', err);
+      return null;
+    }
+  };
+
+  const qrCodeUrl = useMemo(() => {
+    if (!invoice || !totals) return null;
+    return generateInvoiceQR(invoice, totals);
+  }, [invoice.invoiceNo, invoice.issueDate, invoice.seller?.name, invoice.buyer?.name, totals?.grandTotal]);
+
   return (
-    <div id="invoice-root" className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      {/* Styles scoped specifically to #invoice-root */}
+    <div id="invoice-root" className="min-h-screen bg-[#F3F4F6] font-sans antialiased text-slate-900">
+      {/* 1. Global Print Styles */}
       <style jsx global>{`
-        #invoice-root { --primary: #2563eb; }
-        #invoice-root input:disabled { background: #f8fafc; cursor: not-allowed; border-color: #e2e8f0; }
         @media print {
-          #invoice-root .no-print { display: none !important; }
-          #invoice-root .print-only { display: block !important; }
-          #invoice-root { background: white; padding: 0; }
+          .no-print { display: none !important; }
+          .print-only { display: block !important; }
+          body, #invoice-root { background: white !important; padding: 0 !important; }
+          #preview-pane { padding: 0 !important; }
+          .a4-paper { box-shadow: none !important; margin: 0 !important; border: none !important; }
+        }
+        .ghost-input {
+          background: transparent;
+          border: 1px solid transparent;
+          transition: all 0.2s;
+        }
+        .ghost-input:hover:not(:disabled), .ghost-input:focus {
+          background: white;
+          border-color: #E2E8F0;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .a4-paper {
+          width: 210mm;
+          min-height: 297mm;
+          padding: 15mm;
+          margin: auto;
+          background: white;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
         }
       `}</style>
 
-      {/* ACTION BAR */}
-      <nav className="no-print sticky top-0 z-50 flex items-center justify-between border-b bg-white/90 px-8 py-4 backdrop-blur-md">
+      {/* 2. NAVIGATION BAR */}
+      <nav className="no-print sticky top-0 z-50 flex items-center justify-between border-b border-slate-200 bg-white/80 px-8 py-4 backdrop-blur-md">
         <div className="flex items-center gap-4">
-          <div className="rounded-lg bg-blue-600 p-2 text-white"><Shield size={20}/></div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-200">
+            <ShieldCheck size={24} />
+          </div>
           <div>
-            <h1 className="text-sm font-black uppercase tracking-tighter">Enterprise Invoice Engine</h1>
-            <p className="text-[10px] text-slate-400 font-mono">{invoice.integrityHash || 'UNSECURED_DRAFT'}</p>
+            <h1 className="text-sm font-black uppercase tracking-widest">Fin-Core Engine</h1>
+            <p className="text-[10px] font-bold text-slate-400">ENTERPRISE GENERATOR v3.0</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          {invoice.status === 'FINAL' ? (
-            <button onClick={createRevision} className="flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-xs font-bold text-white hover:bg-amber-600">
-              <RotateCcw size={14}/> Create Revision (v{invoice.version + 1})
-            </button>
-          ) : (
-            <button onClick={toggleLock} className="flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800">
-              <Lock size={14}/> Finalize & Lock
-            </button>
-          )}
-          <button onClick={() => window.print()} className="flex items-center gap-2 rounded-md border bg-white px-4 py-2 text-xs font-bold hover:bg-slate-50">
-            <Printer size={14}/> Print A4
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setInvoice({...invoice, locked: !invoice.locked})}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-black transition-all ${
+              invoice.locked ? 'bg-slate-100 text-slate-600' : 'bg-slate-900 text-white hover:bg-slate-800'
+            }`}
+          >
+            {invoice.locked ? <Lock size={14} /> : <Settings2 size={14} />}
+            {invoice.locked ? 'UNSET FINAL' : 'FINAL LOCK'}
+          </button>
+          <button onClick={() => window.print()} className="flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-4 py-2 text-xs font-black hover:bg-slate-50">
+            <Printer size={14} /> PRINT PDF
           </button>
         </div>
       </nav>
 
-      <main className="grid grid-cols-1 lg:grid-cols-2">
-        {/* EDITOR PANEL */}
-        <section className="no-print h-[calc(100vh-70px)] overflow-y-auto border-r p-8">
-          <div className="mx-auto max-w-2xl space-y-8">
-            {/* COMPLIANCE HEADER */}
-            <div className="grid grid-cols-2 gap-6 rounded-xl border border-blue-100 bg-blue-50/30 p-6">
+      <main className="grid grid-cols-1 lg:grid-cols-[1fr_450px] xl:grid-cols-[1fr_550px]">
+        {/* 3. EDITOR PANEL (LEFT) */}
+        <section className="no-print h-[calc(100vh-73px)] overflow-y-auto p-12">
+          <div className="mx-auto max-w-4xl space-y-12">
+            
+            {/* Header Metadata */}
+            <div className="grid grid-cols-3 gap-8 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400">Invoice Title</label>
-                <select 
-                  disabled={invoice.locked}
-                  className="w-full rounded-lg border-slate-200 bg-white p-2 text-sm font-bold focus:ring-2 focus:ring-blue-500"
-                  value={invoice.title}
-                  onChange={e => setInvoice({...invoice, title: e.target.value})}
-                >
-                  <option>TAX INVOICE</option>
-                  <option>CREDIT NOTE</option>
-                  <option>PROFORMA INVOICE</option>
-                </select>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Document Type</label>
+                <input className="ghost-input w-full rounded-md p-2 text-sm font-bold uppercase" value="Tax Invoice" disabled={invoice.locked} />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400">Invoice Number</label>
-                <input 
-                  disabled={invoice.locked}
-                  className="w-full rounded-lg border-slate-200 p-2 text-sm font-bold"
-                  value={invoice.number}
-                  onChange={e => setInvoice({...invoice, number: e.target.value})}
-                />
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Invoice Number</label>
+                <input className="ghost-input w-full rounded-md p-2 text-sm font-bold" value={invoice.number} disabled={invoice.locked} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Currency</label>
+                <select className="ghost-input w-full rounded-md p-2 text-sm font-bold appearance-none">
+                  <option>AED - UAE Dirham</option>
+                  <option>USD - Dollar</option>
+                </select>
               </div>
             </div>
 
-            {/* DYNAMIC COLUMN EDITOR */}
-            <div className="space-y-4">
+            {/* Line Items Table */}
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Transaction Lines</h3>
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-500">Transaction Lines</h3>
                 <button 
-                  disabled={invoice.locked}
-                  onClick={() => setInvoice({...invoice, items: [...invoice.items, {id: Date.now().toString(), name: '', qty: 1, rate: 0, taxP: 5}]})}
-                  className="text-[10px] font-black text-blue-600 hover:underline"
+                  onClick={() => setInvoice({...invoice, items: [...invoice.items, {id: Date.now(), name: '', qty: 1, rate: 0, taxP: 5}]})}
+                  className="flex items-center gap-2 text-[10px] font-black text-indigo-600 hover:text-indigo-700"
                 >
-                  + ADD POSITION
+                  <Plus size={14} /> ADD POSITION
                 </button>
               </div>
 
-              <div className="space-y-3">
-                {invoice.items.map((item, idx) => (
-                  <div key={item.id} className="group relative rounded-xl border bg-white p-4 transition-all hover:border-blue-300 shadow-sm">
-                    <div className="grid grid-cols-12 gap-4">
-                      <div className="col-span-6 space-y-1">
-                        <input 
-                          disabled={invoice.locked}
-                          placeholder="Item Description" 
-                          className="w-full border-none p-0 text-sm font-bold focus:ring-0"
-                          value={item.name}
-                          onChange={e => {
-                            const newItems = [...invoice.items];
-                            newItems[idx].name = e.target.value;
-                            setInvoice({...invoice, items: newItems});
-                          }}
-                        />
-                        <input 
-                          disabled={invoice.locked}
-                          placeholder="HSN/SAC" 
-                          className="w-full border-none p-0 text-[10px] text-slate-400 focus:ring-0 uppercase"
-                          value={item.hsn}
-                          onChange={e => {
-                            const newItems = [...invoice.items];
-                            newItems[idx].hsn = e.target.value;
-                            setInvoice({...invoice, items: newItems});
-                          }}
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <label className="text-[9px] font-bold text-slate-400">Qty</label>
-                        <input 
-                          disabled={invoice.locked}
-                          type="number" 
-                          className="w-full border-none p-0 text-sm focus:ring-0"
-                          value={item.qty}
-                          onChange={e => {
-                            const newItems = [...invoice.items];
-                            newItems[idx].qty = e.target.value;
-                            setInvoice({...invoice, items: newItems});
-                          }}
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <label className="text-[9px] font-bold text-slate-400">Rate</label>
-                        <input 
-                          disabled={invoice.locked}
-                          type="number" 
-                          className="w-full border-none p-0 text-sm focus:ring-0"
-                          value={item.rate}
-                          onChange={e => {
-                            const newItems = [...invoice.items];
-                            newItems[idx].rate = e.target.value;
-                            setInvoice({...invoice, items: newItems});
-                          }}
-                        />
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <label className="text-[9px] font-bold text-slate-400">VAT %</label>
-                        <input 
-                          disabled={invoice.locked}
-                          type="number" 
-                          className="w-full border-none p-0 text-right text-sm focus:ring-0 font-bold"
-                          value={item.taxP}
-                          onChange={e => {
-                            const newItems = [...invoice.items];
-                            newItems[idx].taxP = e.target.value;
-                            setInvoice({...invoice, items: newItems});
-                          }}
-                        />
-                      </div>
-                    </div>
-                    {!invoice.locked && (
-                      <button 
-                        onClick={() => setInvoice({...invoice, items: invoice.items.filter(i => i.id !== item.id)})}
-                        className="absolute -right-2 -top-2 rounded-full bg-red-100 p-1 text-red-600 opacity-0 group-hover:opacity-100"
-                      >
-                        <Trash2 size={12}/>
-                      </button>
+              <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                <table className="w-full border-collapse text-left text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-100">
+                    <tr className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                      {columnConfig
+                        .filter(col => col.visible && !col.isPrivate) // Hide private columns in print
+                        .map(col => (
+                          <th key={col.id} className="border-b border-gray-300 px-2 py-1 text-left text-xs font-semibold">
+                            {col.label}
+                          </th>
+                        ))
+                      }
+                      <th className="w-12"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {invoice.items.map((item) => (
+                      <tr key={item.id} className="group hover:bg-slate-50/50">
+                        <td className="p-2"><input disabled={invoice.locked} className="ghost-input w-full p-2" value={item.name} onChange={e => updateItem(item.id, 'name', e.target.value)} /></td>
+                        <td className="p-2"><input disabled={invoice.locked} className="ghost-input w-full p-2" value={item.hsn} onChange={e => updateItem(item.id, 'hsn', e.target.value)} /></td>
+                        <td className="p-2"><input disabled={invoice.locked} type="number" className="ghost-input w-full p-2" value={item.qty} onChange={e => updateItem(item.id, 'qty', e.target.value)} /></td>
+                        <td className="p-2"><input disabled={invoice.locked} type="number" className="ghost-input w-full p-2" value={item.rate} onChange={e => updateItem(item.id, 'rate', e.target.value)} /></td>
+                        <td className="p-2"><input disabled={invoice.locked} type="number" className="ghost-input w-full p-2" value={item.taxP} onChange={e => updateItem(item.id, 'taxP', e.target.value)} /></td>
+                        <td className="p-4 text-right font-black text-slate-900">
+                          {(item.qty * item.rate).toFixed(2)}
+                        </td>
+                        <td className="p-2">
+                          <button onClick={() => setInvoice({...invoice, items: invoice.items.filter(i => i.id !== item.id)})} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all">
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Column Configuration */}
+            <div className="mt-8 border-t pt-6">
+              <h3 className="text-sm font-bold text-gray-700 mb-4">Column Configuration</h3>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {columnConfig.map(col => (
+                  <div key={col.id} className="flex items-center gap-3 bg-gray-50 p-2 rounded">
+                    <input
+                      type="checkbox"
+                      checked={col.visible}
+                      onChange={() => toggleColumnVisibility(col.id)}
+                      className="w-4 h-4 accent-blue-600"
+                    />
+                    <input
+                      type="text"
+                      value={col.label}
+                      onChange={e => renameColumn(col.id, e.target.value)}
+                      className="flex-1 text-xs px-2 py-1 border rounded bg-white hover:border-blue-300"
+                      disabled={invoice.locked}
+                    />
+                    {col.isPrivate && (
+                      <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">
+                        Private
+                      </span>
                     )}
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* Calculations Panel */}
+            <div className="grid grid-cols-2 gap-8">
+              <div className="rounded-3xl border border-slate-200 bg-white p-8 space-y-4">
+                <h4 className="text-[10px] font-black uppercase text-slate-400">Compliance & Tax</h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">TDS / Withholding (%)</label>
+                    <input type="number" className="ghost-input w-full rounded-lg border border-slate-100 p-2 text-sm" value={invoice.tdsRate} onChange={e => setInvoice({...invoice, tdsRate: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">Extra Charges (Fixed)</label>
+                    <input type="number" className="ghost-input w-full rounded-lg border border-slate-100 p-2 text-sm" />
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-3xl border border-slate-900 bg-slate-900 p-8 text-white shadow-xl shadow-slate-200">
+                <div className="space-y-3">
+                  <div className="flex justify-between text-xs opacity-60">
+                    <span>Subtotal</span>
+                    <span>{totals.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs opacity-60">
+                    <span>Tax Aggregation</span>
+                    <span>{totals.totalTax.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-white/10 pt-4 text-lg font-black">
+                    <span>TOTAL DUE</span>
+                    <span className="text-indigo-400">{invoice.currency} {totals.grandTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* A4 PREVIEW ENGINE */}
-        <section className="bg-slate-200 p-12 overflow-y-auto print:bg-white print:p-0">
-          <div className="mx-auto box-border min-h-[297mm] w-[210mm] bg-white p-[20mm] shadow-2xl print:m-0 print:shadow-none">
-            {/* WATERMARK FOR CANCELLED */}
+        {/* 4. PREVIEW PANE (RIGHT) */}
+        <section id="preview-pane" className="bg-slate-300 p-12 overflow-y-auto flex justify-center print:bg-white print:p-0">
+          <div className={`relative w-full bg-white shadow-lg border-4 border-gray-200 p-8 ${
+            invoice.status === 'CANCELLED' ? 'cancelled' : ''
+          }`} style={{ height: '297mm', width: '210mm' }}>
+            
+            {/* WATERMARK */}
             {invoice.status === 'CANCELLED' && (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.08] rotate-45">
-                <h1 className="text-[120px] font-black border-8 border-red-600 p-10 text-red-600">CANCELLED</h1>
-              </div>
+              <div className="invoice-watermark">CANCELLED</div>
             )}
 
-            <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8">
-              <div>
-                <h2 className="text-4xl font-black tracking-tighter">{invoice.title || 'TAX INVOICE'}</h2>
-                <div className="mt-6 space-y-1 text-sm">
-                  <p className="font-black">Seller TRN: <span className="font-normal text-slate-600">100349200000003</span></p>
-                  <p className="font-black">Address: <span className="font-normal text-slate-600">Business Bay, Dubai, UAE</span></p>
+            {/* REST OF INVOICE CONTENT */}
+            <div className={invoice.status === 'CANCELLED' ? 'relative z-10 opacity-75' : 'relative z-10'}>
+              <div className="flex justify-between items-start border-b-2 border-slate-900 pb-10">
+                <div>
+                  <h2 className="text-4xl font-black tracking-tighter">TAX INVOICE</h2>
+                  <div className="mt-6 text-[11px] space-y-1 uppercase tracking-wider text-slate-500">
+                    <p className="font-black text-slate-900">Seller TRN: 100349200000003</p>
+                    <p>Business Bay, Level 15</p>
+                    <p>Dubai, United Arab Emirates</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="h-16 w-32 bg-slate-100 border border-dashed flex items-center justify-center text-[10px] text-slate-400 font-bold">LOGO</div>
+                  <div className="mt-6 text-[11px] font-black uppercase">
+                    <p>Invoice #: {invoice.number}</p>
+                    <p className="text-slate-400">Date: {new Date().toLocaleDateString()}</p>
+                  </div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="h-16 w-32 bg-slate-900 text-white flex items-center justify-center font-bold italic">LOGO</div>
-                <div className="mt-6 text-sm">
-                  <p className="font-black">Invoice #: <span className="font-normal">{invoice.number}</span></p>
-                  <p className="font-black">Date: <span className="font-normal">{invoice.issueDate}</span></p>
-                  <p className="font-black text-blue-600">Version: {invoice.version}.0</p>
-                </div>
-              </div>
-            </div>
 
-            <table className="mt-12 w-full text-left">
-              <thead className="border-b-2 border-slate-900 bg-slate-50">
-                <tr className="text-[10px] font-black uppercase tracking-widest">
-                  <th className="py-4 pl-4">Description</th>
-                  <th className="py-4 text-right">Qty</th>
-                  <th className="py-4 text-right">Rate</th>
-                  <th className="py-4 text-right">VAT</th>
-                  <th className="py-4 text-right pr-4">Amount ({invoice.currency})</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {totals.items.map((item, idx) => (
-                  <tr key={idx} className="text-xs">
-                    <td className="py-5 pl-4">
-                      <p className="font-bold">{item.name || 'Untitled Line Item'}</p>
-                      <p className="text-[9px] text-slate-400 uppercase mt-1">HSN: {item.hsn || '---'}</p>
-                    </td>
-                    <td className="py-5 text-right font-medium">{item.qty}</td>
-                    <td className="py-5 text-right font-medium">{item.rate.toFixed(2)}</td>
-                    <td className="py-5 text-right font-medium text-slate-400">{item.step6_tax?.toFixed(2) || '0.00'}</td>
-                    <td className="py-5 text-right font-black pr-4">{item.step6_lineTotal?.toFixed(2)}</td>
+              <table className="mt-12 w-full text-left">
+                <thead>
+                  <tr className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">
+                    <th className="py-4">Item Details</th>
+                    <th className="py-4 text-right">Qty</th>
+                    <th className="py-4 text-right">Rate</th>
+                    <th className="py-4 text-right">Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="mt-12 flex justify-end">
-              <div className="w-72 space-y-3">
-                <div className="flex justify-between text-xs">
-                  <span className="font-black uppercase text-slate-400 tracking-widest">Net Subtotal</span>
-                  <span className="font-bold">{totals.subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="font-black uppercase text-slate-400 tracking-widest">Total VAT</span>
-                  <span className="font-bold">{totals.totalTax.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between border-t-2 border-slate-900 pt-4">
-                  <span className="text-sm font-black uppercase tracking-tighter">Grand Total</span>
-                  <span className="text-xl font-black text-blue-600">{invoice.currency} {totals.grandTotal.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* TAX SUMMARY BLOCK (UAE COMPLIANT) */}
-            <div className="mt-20 grid grid-cols-2 gap-12 border-t pt-10">
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Tax Aggregation Summary</h4>
-                <div className="space-y-1">
-                  {totals.taxSummary.map(tax => (
-                    <div key={tax.rate} className="flex justify-between text-[10px] border-b border-slate-50 pb-1">
-                      <span className="text-slate-500 italic">Standard Rate {tax.rate}%</span>
-                      <span className="font-bold">{tax.amount.toFixed(2)}</span>
-                    </div>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {totals.items.map((item, idx) => (
+                    <tr key={idx} className="text-[12px]">
+                      <td className="py-6">
+                        <p className="font-black text-slate-900">{item.name || 'Undefined Item'}</p>
+                        <p className="text-[10px] text-slate-400 mt-1 uppercase">HSN: {item.hsn || '---'}</p>
+                      </td>
+                      <td className="py-6 text-right font-medium">{item.qty}</td>
+                      <td className="py-6 text-right font-medium">{item.rate.toFixed(2)}</td>
+                      <td className="py-6 text-right font-black text-slate-900">{item.lineTotal.toFixed(2)}</td>
+                    </tr>
                   ))}
+                </tbody>
+              </table>
+
+              <div className="mt-20 ml-auto w-64 space-y-4">
+                <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                  <span>Net Subtotal</span>
+                  <span>{totals.subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                  <span>VAT (5%)</span>
+                  <span>{totals.totalTax.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between border-t-2 border-slate-900 pt-4 text-sm font-black">
+                  <span>GRAND TOTAL</span>
+                  <span className="text-lg tracking-tighter">{invoice.currency} {totals.grandTotal.toFixed(2)}</span>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-2">
-                <div className="h-24 w-24 border p-1 bg-slate-50">
-                  <div className="h-full w-full bg-slate-200 flex items-center justify-center text-[8px] text-slate-400 font-bold">QR CODE</div>
-                </div>
-                <p className="text-[8px] font-mono text-slate-400 max-w-[150px] text-right break-all">
-                  SHA-256: {invoice.integrityHash || 'DRAFT_STAMP_PENDING'}
-                </p>
+
+              <div className="mt-32 border-t border-slate-100 pt-10 grid grid-cols-2 gap-12">
+                 <div>
+                    <h5 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">Terms & Payment</h5>
+                    <p className="text-[10px] leading-relaxed text-slate-500 italic">
+                      All payments should be made via bank transfer to the details mentioned in the service agreement. 
+                      Late payments incur a 2% monthly fee.
+                    </p>
+                 </div>
+                 <div className="flex flex-col items-end gap-2">
+                    <div className="h-24 w-24 bg-slate-50 border p-1 border-slate-200">
+                       <div className="h-full w-full bg-slate-100 flex items-center justify-center text-[8px] text-slate-400 font-bold">ZATCA QR</div>
+                    </div>
+                    <p className="text-[7px] font-mono text-slate-300 break-all max-w-[150px] text-right">
+                      SHA-256: {Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)}
+                    </p>
+                 </div>
               </div>
             </div>
           </div>

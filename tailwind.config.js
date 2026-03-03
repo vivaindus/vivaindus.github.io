@@ -1,9 +1,11 @@
-/** @type {import('tailwindcss').Config} */
 module.exports = {
-  important: '#invoice-root',
+  important: '#invoice-root', // Scopes all utility classes
+  corePlugins: {
+    preflight: false, // Prevents Tailwind from resetting your site's global styles
+  },
   content: [
-    "./pages/invoice-engine/**/*.{js,ts,jsx,tsx}", // Target only invoice
-    "./engine-data/**/*.{js,ts,jsx,tsx}",         // Target only invoice logic
+    "./pages/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {},

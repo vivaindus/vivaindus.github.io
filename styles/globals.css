@@ -467,7 +467,7 @@ footer p { color: var(--text-muted); margin-bottom: 10px; }
     gap: 10px;
 }
 
-.qty-btn {
+ qty-btn {
     background: #eee;
     border: none;
     width: 25px;
@@ -704,4 +704,59 @@ footer p { color: var(--text-muted); margin-bottom: 10px; }
 .shifa-app-root {
     position: relative;
     padding-top: 1px; /* Prevents margin collapse */
+}
+
+#invoice-root .invoice-watermark {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  font-size: 120px;
+  font-weight: 900;
+  color: rgba(255, 0, 0, 0.15);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 0;
+  letter-spacing: 10px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#invoice-root .invoice-a4-container.cancelled {
+  position: relative;
+  background: rgba(255, 0, 0, 0.02);
+}
+
+#invoice-root .invoice-a4-container.cancelled .invoice-watermark {
+  display: block;
+}
+
+#invoice-root .invoice-a4-container:not(.cancelled) .invoice-watermark {
+  display: none;
+}
+
+@media print {
+  #invoice-root .invoice-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+  }
+
+  #invoice-root .invoice-a4-container.cancelled::before {
+    content: 'CANCELLED';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 200px;
+    font-weight: 900;
+    color: rgba(255, 0, 0, 0.1);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 1;
+    letter-spacing: 20px;
+  }
+
+  #invoice-root .invoice-a4-container.cancelled {
+    page-break-inside: avoid;
+  }
 }
