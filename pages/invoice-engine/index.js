@@ -4,7 +4,7 @@ import {
   Plus, Trash2, ShieldCheck, Printer, 
   Settings2, Download, Lock, ChevronRight 
 } from 'lucide-react';
-import QRCode from 'qrcode.js';
+import QRCode from 'qrcode.react';
 
 const DEFAULT_COLUMNS = [
   { id: 'sn', label: 'S.N.', visible: true, isPrivate: false },
@@ -145,38 +145,23 @@ export default function EnterpriseInvoice() {
     });
   };
 
-  const generateInvoiceQR = (invoiceData, totals) => {
-    // Guard: Check if required data exists
+  const generateInvoiceQRString = (invoiceData, totals) => {
     if (!invoiceData || !totals || !totals.grandTotal) {
       return null;
     }
 
-    const qrString = JSON.stringify({
+    return JSON.stringify({
       invoiceNo: invoiceData.invoiceNo || 'DRAFT',
       date: invoiceData.issueDate || new Date().toISOString().split('T')[0],
       total: totals.grandTotal.toString(),
       seller: invoiceData.seller?.name || 'N/A',
       buyer: invoiceData.buyer?.name || 'N/A'
     });
-
-    try {
-      const qr = new QRCode({
-        text: qrString,
-        width: 200,
-        height: 200,
-        colorDark: '#000000',
-        colorLight: '#ffffff'
-      });
-      return qr.createDataURL();
-    } catch (err) {
-      console.error('QR Generation failed:', err);
-      return null;
-    }
   };
 
   const qrCodeUrl = useMemo(() => {
     if (!invoice || !totals) return null;
-    return generateInvoiceQR(invoice, totals);
+    return generateInvoiceQRString(invoice, totals);
   }, [invoice.invoiceNo, invoice.issueDate, invoice.seller?.name, invoice.buyer?.name, totals?.grandTotal]);
 
   return (
