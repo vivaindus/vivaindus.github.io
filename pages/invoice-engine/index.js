@@ -1,442 +1,449 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import Decimal from 'decimal.js';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { InvoiceLogicEngine } from '../../engine-data/logic'; // Our financial engine
+import { invoiceStyles } from './styles'; // Dedicated styles
 
-// --- FINANCIAL MATH ENGINE ---
-class InvoiceEngine {
-  constructor(config) {
-    this.config = {
-      taxInclusive: config.taxInclusive || false,
-      roundingMode: config.roundingMode || 'HALF_EVEN',
-      precision: 2
-    };
-  }
+export default function EnterpriseInvoiceApp() {
+  const [status, setStatus] = useState('DRAFT'); // DRAFT, FINAL, CANCELLED
+  const [currentRevision, setCurrentRevision] = useState(1);
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
 
-  calculate(data) {
-    let subtotal = new Decimal(0);
-    let totalTax = new Decimal(0);
-    let totalLineDiscount = new Decimal(0);
-    const taxSummary = {};
+  // Invoice Data State - Comprehensive to match all Refrens.com features
+  const [invoice, setInvoice] = useState({
+    invoiceTitle: "Tax Invoice",
+    invoiceNumber: "INV-2026-0001",
+    issueDate: new Date().toISOString().split('T')[0],
+    dueDate: "",
+    supplyDate: "",
+    poReference: "",
+    currency: "AED",
+    exchangeRate: 1.0,
+    reverseCharge: false,
+    
+    // Business Details
+    billedBy: { name: "", taxId: "", address: "", phone: "", email: "", website: "", bankDetails: "" },
+    
+    // Client Details
+    billedTo: { name: "", taxId: "", address: "", shippingAddress: "", phone: "", email: "" },
+    
+    // Line Items & Dynamic Columns
+    columns: [
+      { key: 'sn', label: 'SN', visible: true, width: '40px', print: true },
+      { key: 'itemCode', label: 'Item Code', visible: false, width: '80px', print: true },
+      { key: 'name', label: 'Item', visible: true, width: 'auto', print: true },
+      { key: 'description', label: 'Description', visible: true, width: '200px', print: true },
+      { key: 'hsn', label: 'HSN/SAC', visible: false, width: '80px', print: true },
+      { key: 'qty', label: 'Qty', visible: true, width: '70px', print: true },
+      { key: 'unit', label: 'Unit', visible: false, width: '60px', print: true },
+      { key: 'unitPrice', label: 'Rate', visible: true, width: '100px', print: true },
+      { key: 'lineCharge', label: 'Charge', visible: false, width: '80px', print: true },
+      { key: 'lineDiscount', label: 'Discount', visible: true, width: '80px', print: true },
+      { key: 'taxRate', label: 'VAT %', visible: true, width: '70px', print: true },
+      { key: 'netAmount', label: 'Net Amt', visible: false, width: '100px', print: true },
+      { key: 'taxAmount', label: 'Tax Amt', visible: false, width: '100px', print: true },
+      { key: 'grossAmount', label: 'Gross Amt', visible: false, width: '100px', print: true },
+      { key: 'total', label: 'Amount', visible: true, width: '120px', print: true },
+      { key: 'costPrice', label: 'Cost', visible: false, width: '80px', isPrivate: true, print: false } // Private & hidden in print
+    ],
+    items: [{ 
+      id: Date.now(), name: "Service A", description: "", hsn: "", qty: 1, unit: "Pcs", unitPrice: 100, 
+      lineCharge: 0, chargeType: 'fixed', // Line-level charge
+      lineDiscount: 0, discountType: 'percent', // Line-level discount
+      taxRate: 5, itemCode: "", costPrice: 0 
+    }],
 
-    const items = data.items.map(item => {
-      const qty = new Decimal(item.qty || 0);
-      const rate = new Decimal(item.rate || 0);
-      const base = qty.mul(rate);
+    // Global Adjustments
+    globalDiscount: { value: 0, type: 'percent', layer: 'before_tax', print: true }, // Global discount config
+    extraCharges: [{ id: 'shipping', name: 'Shipping', value: 0, taxable: true, taxRate: 5, print: true }], // Extra charges
+    tdsRate: 0, // TDS rate
 
-      // Line Discount
-      const disc = new Decimal(item.discount || 0);
-      const afterDisc = base.minus(disc);
-      totalLineDiscount = totalLineDiscount.plus(disc);
+    // Calculation & UI Config
+    config: { roundingMode: 'HALF_EVEN', precision: 2, taxInclusive: false },
+    manualRounding: null, // 'up' or 'down'
 
-      // Tax Logic
-      const taxRate = new Decimal(item.vat || 0).div(100);
-      let taxAmt, netAmt;
-
-      if (this.config.taxInclusive) {
-        taxAmt = afterDisc.minus(afterDisc.div(taxRate.plus(1)));
-        netAmt = afterDisc.minus(taxAmt);
-      } else {
-        taxAmt = afterDisc.mul(taxRate);
-        netAmt = afterDisc;
-      }
-
-      const rateKey = (item.vat || 0).toString();
-      taxSummary[rateKey] = (taxSummary[rateKey] || new Decimal(0)).plus(taxAmt);
-
-      subtotal = subtotal.plus(netAmt);
-      totalTax = totalTax.plus(taxAmt);
-
-      return { ...item, netAmt: netAmt.toNumber(), taxAmt: taxAmt.toNumber(), total: netAmt.plus(taxAmt).toNumber() };
-    });
-
-    let runningTotal = subtotal.plus(totalTax);
-
-    // TDS Deduction
-    const tdsAmt = runningTotal.mul(new Decimal(data.tdsRate || 0).div(100));
-    runningTotal = runningTotal.minus(tdsAmt);
-
-    // Extra Charges & Overall Discount
-    const extra = new Decimal(data.extraCharges || 0);
-    const overallDisc = new Decimal(data.overallDiscount || 0);
-    runningTotal = runningTotal.plus(extra).minus(overallDisc);
-
-    // Rounding
-    let grandTotal;
-    if (data.manualRounding === 'up') grandTotal = runningTotal.ceil();
-    else if (data.manualRounding === 'down') grandTotal = runningTotal.floor();
-    else grandTotal = runningTotal.toDecimalPlaces(this.config.precision, Decimal.ROUND_HALF_EVEN);
-
-    return {
-      items,
-      subtotal: subtotal.toNumber(),
-      totalTax: totalTax.toNumber(),
-      taxSummary: Object.entries(taxSummary).map(([r, a]) => ({ rate: r, amt: a.toNumber() })),
-      totalLineDiscount: totalLineDiscount.toNumber(),
-      tdsAmount: tdsAmt.toNumber(),
-      extraCharges: extra.toNumber(),
-      overallDiscount: overallDisc.toNumber(),
-      roundingAdj: grandTotal.minus(runningTotal).toNumber(),
-      grandTotal: grandTotal.toNumber()
-    };
-  }
-}
-
-// --- AMOUNT IN WORDS UTILITY ---
-const numberToWords = (n, currency) => {
-  const amount = Math.floor(n || 0);
-  if (amount === 0) return "ZERO ONLY";
-  const s =['','ONE ','TWO ','THREE ','FOUR ','FIVE ','SIX ','SEVEN ','EIGHT ','NINE ','TEN ','ELEVEN ','TWELVE ','THIRTEEN ','FOURTEEN ','FIFTEEN ','SIXTEEN ','SEVENTEEN ','EIGHTEEN ','NINETEEN '];
-  const t =['', '', 'TWENTY','THIRTY','FORTY','FIFTY','SIXTY','SEVENTY','EIGHTY','NINETY'];
-  const num = amount.toString().padStart(9, '0');
-  const gn = (idx, label) => {
-    const v = parseInt(num.substr(idx, 2));
-    if (v === 0) return '';
-    return (s[v] || t[num[idx]] + ' ' + s[num[idx+1]]) + label + ' ';
-  };
-  let res = gn(0, 'CRORE ') + gn(2, 'LAKH ') + gn(4, 'THOUSAND ') + gn(6, 'HUNDRED ');
-  const last2 = parseInt(num.substr(7, 2));
-  if (last2 > 0) res += (s[last2] || t[num[7]] + ' ' + s[num[8]]);
-  return `${currency} ${res.trim()} ONLY`;
-};
-
-// --- MAIN REACT COMPONENT ---
-export default function UltimateInvoiceGenerator() {
-  const previewRef = useRef(null);
-  const[logoBase64, setLogoBase64] = useState(null);
-  const [data, setData] = useState({
-    businessName: "Your Company LLC", businessTRN: "", businessAddress: "", businessContact: "", bankDetails: "",
-    clientName: "Client Name", clientTRN: "", clientAddress: "", clientEmail: "",
-    invoiceNo: "INV-0001", date: new Date().toISOString().split('T')[0], dueDate: "", 
-    currency: "AED", reference: "", paymentTerms: "",
-    items:[{ id: Date.now(), name: "", desc: "", qty: 1, rate: 0, vat: 5, discount: 0 }],
-    extraCharges: 0, overallDiscount: 0, tdsRate: 0,
-    notes: "Thank you for your business.", terms: "Payment due as per terms mentioned above.",
-    config: { taxInclusive: false }, manualRounding: null, themeColor: "#2563eb"
+    // Document Footer
+    invoiceNotes: "Thank you for your business. We appreciate your prompt payment.",
+    paymentTerms: "Payment due within 30 days.",
+    signatureImage: null, // Base64 or URL for signature
+    qrCodePlaceholder: true, // Show QR code placeholder
   });
 
-  // Calculate live totals
-  const totals = useMemo(() => {
-    const engine = new InvoiceEngine(data.config);
-    return engine.calculate(data);
-  }, [data]);
+  // Calculate totals using the financial engine
+  const calculatedTotals = useMemo(() => {
+    const engine = new InvoiceLogic(invoice.config);
+    return engine.calculate(invoice);
+  }, [invoice]);
 
-  // Handlers
-  const updateField = (field, value) => setData(prev => ({ ...prev, [field]: value }));
-  const updateItem = (id, field, value) => {
-    setData(prev => ({
-      ...prev, items: prev.items.map(i => i.id === id ? { ...i, [field]: value } : i)
+  const validationErrors = useMemo(() => InvoiceLogic.validate(invoice), [invoice]);
+
+  const isLocked = status === 'FINAL';
+
+  // --- UI Update Handlers ---
+  const updateInvoice = (field, value, path = []) => {
+    const newState = JSON.parse(JSON.stringify(invoice)); // Deep copy for immutability
+    let current = newState;
+    for (let i = 0; i < path.length; i++) {
+      if (i === path.length - 1) {
+        current[path[i]][field] = value;
+      } else {
+        current = current[path[i]];
+      }
+    }
+    if (path.length === 0) { // Top-level field
+      newState[field] = value;
+    }
+    setInvoice(newState);
+  };
+
+  const updateItem = (itemId, field, value) => {
+    setInvoice(prev => ({
+      ...prev,
+      items: prev.items.map(item =>
+        item.id === itemId ? { ...item, [field]: value } : item
+      )
     }));
   };
-  const addItem = () => setData(prev => ({ ...prev, items:[...prev.items, { id: Date.now(), name: "", desc: "", qty: 1, rate: 0, vat: 5, discount: 0 }] }));
-  const removeItem = (id) => setData(prev => ({ ...prev, items: prev.items.filter(i => i.id !== id) }));
 
-  const handleLogoUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => setLogoBase64(ev.target.result);
-      reader.readAsDataURL(file);
+  const addItemRow = () => {
+    setInvoice(prev => ({
+      ...prev,
+      items: [...prev.items, {
+        id: Date.now(), name: "", description: "", hsn: "", qty: 1, unit: "Pcs", unitPrice: 0,
+        lineCharge: 0, chargeType: 'fixed',
+        lineDiscount: 0, discountType: 'percent',
+        taxRate: 5, itemCode: "", costPrice: 0
+      }]
+    }));
+  };
+
+  const removeItemRow = (idToRemove) => {
+    setInvoice(prev => ({
+      ...prev,
+      items: prev.items.filter(item => item.id !== idToRemove)
+    }));
+  };
+
+  const toggleColumnVisibility = (key) => {
+    setInvoice(prev => ({
+      ...prev,
+      columns: prev.columns.map(col =>
+        col.key === key ? { ...col, visible: !col.visible } : col
+      )
+    }));
+  };
+
+  const toggleColumnPrintVisibility = (key) => {
+    setInvoice(prev => ({
+      ...prev,
+      columns: prev.columns.map(col =>
+        col.key === key ? { ...col, print: !col.print } : col
+      )
+    }));
+  };
+
+  const handleFinalize = () => {
+    if (validationErrors.length > 0) {
+      setShowValidationErrors(true);
+      alert("Please fix validation errors before finalizing.");
+      return;
+    }
+    if (window.confirm("Finalizing this invoice will lock it for editing. Continue?")) {
+      setStatus('FINAL');
+      // In a real app, this would save to Supabase / backend and mark as immutable
+      // For this prototype, it just locks the UI
     }
   };
 
-  const downloadPDF = async () => {
-    const canvas = await html2canvas(previewRef.current, { scale: 3, useCORS: true });
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
-    pdf.addImage(imgData, "PNG", 0, 0, canvas.width * ratio, canvas.height * ratio);
-    pdf.save(`${data.invoiceNo}.pdf`);
+  const handleCreateNewRevision = () => {
+    if (window.confirm("Creating a new revision will unlock the invoice for editing. Continue?")) {
+      setStatus('DRAFT');
+      setCurrentRevision(prev => prev + 1);
+      // In a real app, this would create a new entry in a revision history table
+    }
   };
 
-  const generateShareText = () => encodeURIComponent(`Dear ${data.clientName},\n\nPlease find the summary of invoice ${data.invoiceNo} from ${data.businessName}.\nTotal Amount: ${data.currency} ${totals.grandTotal.toFixed(2)}\n\nBest regards,\n${data.businessName}`);
+  const handleDownloadPDF = () => {
+    window.print(); // Uses browser's native print to PDF for selectable text
+  };
 
+  // --- Render ---
   return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8 font-sans text-gray-800">
-      <div className="max-w-[1600px] mx-auto">
-        <div className="mb-6 flex justify-between items-end">
-          <div>
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Enterprise VAT Invoice</h1>
-            <p className="text-sm text-gray-500 mt-1">Live split-screen editor with financial-grade precision.</p>
+    <div className="refrens-layout">
+      {/* Inject styles dynamically */}
+      <style>{invoiceStyles}</style>
+
+      {/* Validation Errors Overlay */}
+      {showValidationErrors && validationErrors.length > 0 && (
+        <div className="no-print" style={{position: 'fixed', top: '1rem', right: '1rem', background: '#fef2f2', border: '1px solid #ef4444', color: '#b91c1c', padding: '1rem', borderRadius: '0.5rem', zIndex: 1000, maxWidth: '300px'}}>
+          <h3 style={{marginTop: 0, fontSize: '1rem'}}>Validation Errors:</h3>
+          <ul style={{margin: 0, paddingLeft: '1.2rem', listStyleType: 'disc'}}>
+            {validationErrors.map((error, idx) => (
+              <li key={idx} style={{marginBottom: '0.25rem', fontSize: '0.85rem'}}>{error}</li>
+            ))}
+          </ul>
+          <button onClick={() => setShowValidationErrors(false)} className="btn btn-secondary btn-small mt-3">Dismiss</button>
+        </div>
+      )}
+
+      <div className="grid-container">
+        {/* LEFT SECTION: Editor Controls */}
+        <div className="controls-panel space-y-4 no-print">
+          {/* Main Actions */}
+          <div className="card">
+            <h2 className="card-header">Document Actions</h2>
+            <button className="btn btn-primary w-full mb-2" onClick={handleFinalize} disabled={isLocked}>
+              {isLocked ? '🔒 Finalized & Locked' : 'Finalize & Lock'}
+            </button>
+            <button className="btn btn-secondary w-full" onClick={handleDownloadPDF}>
+              Download PDF
+            </button>
+            {isLocked && (
+              <button className="btn btn-outline w-full mt-2" onClick={handleCreateNewRevision}>
+                Create New Revision (Unlock)
+              </button>
+            )}
           </div>
-          <div className="flex gap-2 hidden md:flex">
-            <button onClick={downloadPDF} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition">Download PDF</button>
-            <a href={`https://wa.me/?text=${generateShareText()}`} target="_blank" className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg hover:bg-green-700 transition">WhatsApp</a>
+
+          {/* Core Invoice Details */}
+          <div className="card">
+            <h2 className="card-header">Invoice Details</h2>
+            <div className="mb-3">
+              <label className="input-label">Invoice Title</label>
+              <input className="r-input" value={invoice.invoiceTitle} onChange={e => updateInvoice('invoiceTitle', e.target.value)} disabled={isLocked} />
+            </div>
+            <div className="mb-3">
+              <label className="input-label">Invoice Number</label>
+              <input className="r-input" value={invoice.invoiceNumber} onChange={e => updateInvoice('invoiceNumber', e.target.value)} disabled={isLocked} />
+            </div>
+            <div className="row mb-3">
+              <div>
+                <label className="input-label">Issue Date</label>
+                <input type="date" className="r-input" value={invoice.issueDate} onChange={e => updateInvoice('issueDate', e.target.value)} disabled={isLocked} />
+              </div>
+              <div>
+                <label className="input-label">Due Date</label>
+                <input type="date" className="r-input" value={invoice.dueDate} onChange={e => updateInvoice('dueDate', e.target.value)} disabled={isLocked} />
+              </div>
+            </div>
+            <div className="mb-3">
+              <label className="input-label">PO Reference</label>
+              <input className="r-input" value={invoice.poReference} onChange={e => updateInvoice('poReference', e.target.value)} disabled={isLocked} />
+            </div>
+            <div className="row mb-3">
+              <div>
+                <label className="input-label">Currency</label>
+                <select className="r-select" value={invoice.currency} onChange={e => updateInvoice('currency', e.target.value)} disabled={isLocked}>
+                  <option value="AED">AED</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="INR">INR</option>
+                </select>
+              </div>
+              <div>
+                <label className="input-label">Exchange Rate</label>
+                <input type="number" step="0.0001" className="r-input" value={invoice.exchangeRate} onChange={e => updateInvoice('exchangeRate', parseFloat(e.target.value))} disabled={isLocked} />
+              </div>
+            </div>
+          </div>
+
+          {/* Business & Client Details */}
+          <div className="card">
+            <h2 className="section-heading">Business Details</h2>
+            <div className="mb-3"><label className="input-label">Company Name</label><input className="r-input" value={invoice.billedBy.name} onChange={e => updateInvoice('name', e.target.value, ['billedBy'])} disabled={isLocked} /></div>
+            <div className="mb-3"><label className="input-label">TRN / Tax ID</label><input className="r-input" value={invoice.billedBy.taxId} onChange={e => updateInvoice('taxId', e.target.value, ['billedBy'])} disabled={isLocked} /></div>
+            <div className="mb-3"><label className="input-label">Address</label><textarea className="r-textarea" value={invoice.billedBy.address} onChange={e => updateInvoice('address', e.target.value, ['billedBy'])} disabled={isLocked} /></div>
+            <h2 className="section-heading mt-4">Client Details</h2>
+            <div className="mb-3"><label className="input-label">Client Name</label><input className="r-input" value={invoice.billedTo.name} onChange={e => updateInvoice('name', e.target.value, ['billedTo'])} disabled={isLocked} /></div>
+            <div className="mb-3"><label className="input-label">Client TRN</label><input className="r-input" value={invoice.billedTo.taxId} onChange={e => updateInvoice('taxId', e.target.value, ['billedTo'])} disabled={isLocked} /></div>
+            <div className="mb-3"><label className="input-label">Client Address</label><textarea className="r-textarea" value={invoice.billedTo.address} onChange={e => updateInvoice('address', e.target.value, ['billedTo'])} disabled={isLocked} /></div>
+            <button className="field-toggle-btn" onClick={() => updateInvoice('showShippingAddress', !invoice.showShippingAddress, ['billedTo'])}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add Shipping Address
+            </button>
+            {invoice.billedTo.showShippingAddress && (
+                <div className="mb-3 mt-2"><label className="input-label">Shipping Address</label><textarea className="r-textarea" value={invoice.billedTo.shippingAddress} onChange={e => updateInvoice('shippingAddress', e.target.value, ['billedTo'])} disabled={isLocked} /></div>
+            )}
+          </div>
+
+          {/* Line Item & Column Management */}
+          <div className="card">
+            <h2 className="section-heading">Line Items & Columns</h2>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {invoice.columns.map(col => (
+                <span key={col.key} className={`column-control-pill ${col.visible ? 'active' : ''}`} onClick={() => toggleColumnVisibility(col.key)}>
+                  {col.label} {col.isPrivate && ' (P)'}
+                </span>
+              ))}
+            </div>
+            {invoice.items.map((item, idx) => (
+              <div key={item.id} className={`card mb-3 ${isLocked ? 'section-locked' : ''}`}>
+                <div className="card-header">
+                  <h3 style={{fontSize: '1rem'}}>Item #{idx + 1}</h3>
+                  <button className="btn btn-danger btn-small" onClick={() => removeItemRow(item.id)} disabled={isLocked}>X</button>
+                </div>
+                <div className="mb-3"><label className="input-label">Item Name</label><input className="r-input" value={item.name} onChange={e => updateItem(item.id, 'name', e.target.value)} disabled={isLocked} /></div>
+                <div className="mb-3"><label className="input-label">Description</label><textarea className="r-textarea" value={item.description} onChange={e => updateItem(item.id, 'description', e.target.value)} disabled={isLocked} /></div>
+                <div className="row mb-3">
+                  <div><label className="input-label">Qty</label><input type="number" className="r-input" value={item.qty} onChange={e => updateItem(item.id, 'qty', parseFloat(e.target.value))} disabled={isLocked} /></div>
+                  <div><label className="input-label">Unit</label><input className="r-input" value={item.unit} onChange={e => updateItem(item.id, 'unit', e.target.value)} disabled={isLocked} /></div>
+                  <div><label className="input-label">Unit Price</label><input type="number" className="r-input" value={item.unitPrice} onChange={e => updateItem(item.id, 'unitPrice', parseFloat(e.target.value))} disabled={isLocked} /></div>
+                </div>
+                <div className="row mb-3">
+                  <div><label className="input-label">Line Discount (%)</label><input type="number" className="r-input" value={item.lineDiscount} onChange={e => updateItem(item.id, 'lineDiscount', parseFloat(e.target.value))} disabled={isLocked} /></div>
+                  <div><label className="input-label">Tax Rate (%)</label><input type="number" className="r-input" value={item.taxRate} onChange={e => updateItem(item.id, 'taxRate', parseFloat(e.target.value))} disabled={isLocked} /></div>
+                </div>
+              </div>
+            ))}
+            <button className="btn-add-line" onClick={addItemRow} disabled={isLocked}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add New Line
+            </button>
+          </div>
+
+          {/* Global Adjustments */}
+          <div className="card">
+            <h2 className="section-heading">Global Adjustments</h2>
+            <div className="mb-3">
+              <label className="input-label">Global Discount Value</label>
+              <input type="number" className="r-input" value={invoice.globalDiscount.value} onChange={e => updateInvoice('value', parseFloat(e.target.value), ['globalDiscount'])} disabled={isLocked} />
+            </div>
+            <div className="row mb-3">
+              <div>
+                <label className="input-label">Type</label>
+                <select className="r-select" value={invoice.globalDiscount.type} onChange={e => updateInvoice('type', e.target.value, ['globalDiscount'])} disabled={isLocked}>
+                  <option value="fixed">Fixed</option>
+                  <option value="percent">Percentage</option>
+                </select>
+              </div>
+              <div>
+                <label className="input-label">Apply Layer</label>
+                <select className="r-select" value={invoice.globalDiscount.layer} onChange={e => updateInvoice('layer', e.target.value, ['globalDiscount'])} disabled={isLocked}>
+                  <option value="before_tax">Before Tax</option>
+                  <option value="after_tax">After Tax</option>
+                </select>
+              </div>
+            </div>
+            <div className="mb-3">
+              <label className="input-label">TDS Rate (%)</label>
+              <input type="number" className="r-input" value={invoice.tdsRate} onChange={e => updateInvoice('tdsRate', parseFloat(e.target.value))} disabled={isLocked} />
+            </div>
+            <h3 className="input-label mt-4">Extra Charges</h3>
+            {invoice.extraCharges.map(charge => (
+              <div key={charge.id} className="row mb-2">
+                <div><input className="r-input" value={charge.name} onChange={e => updateInvoice('name', e.target.value, ['extraCharges', invoice.extraCharges.findIndex(c => c.id === charge.id)])} disabled={isLocked} /></div>
+                <div><input type="number" className="r-input" value={charge.value} onChange={e => updateInvoice('value', parseFloat(e.target.value), ['extraCharges', invoice.extraCharges.findIndex(c => c.id === charge.id)])} disabled={isLocked} /></div>
+              </div>
+            ))}
+          </div>
+
+          {/* Configuration & Controls */}
+          <div className="card">
+            <h2 className="section-heading">Calculation Config</h2>
+            <div className="mb-3"><label className="input-label">Decimal Precision</label><input type="number" className="r-input" value={invoice.config.precision} onChange={e => updateInvoice('precision', parseInt(e.target.value), ['config'])} disabled={isLocked} /></div>
+            <div className="mb-3"><label className="input-label">Rounding Mode</label><select className="r-select" value={invoice.config.roundingMode} onChange={e => updateInvoice('roundingMode', e.target.value, ['config'])} disabled={isLocked}><option value="HALF_EVEN">Banker's (Half-Even)</option><option value="HALF_UP">Standard (Half-Up)</option></select></div>
+            <div className="mb-3"><label className="input-label">Tax Mode</label><select className="r-select" value={invoice.config.taxInclusive ? 'inclusive' : 'exclusive'} onChange={e => updateInvoice('taxInclusive', e.target.value === 'inclusive', ['config'])} disabled={isLocked}><option value="exclusive">Exclusive</option><option value="inclusive">Inclusive</option></select></div>
+            <h3 className="input-label mt-4">Manual Rounding</h3>
+            <div className="row">
+              <button className="btn btn-outline w-full" onClick={() => updateInvoice('manualRounding', 'up')} disabled={isLocked}>Round Up</button>
+              <button className="btn btn-outline w-full" onClick={() => updateInvoice('manualRounding', 'down')} disabled={isLocked}>Round Down</button>
+              <button className="btn btn-outline w-full" onClick={() => updateInvoice('manualRounding', null)} disabled={isLocked}>Clear</button>
+            </div>
           </div>
         </div>
 
-        {/* --- SPLIT LAYOUT --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* LEFT: EDITOR */}
-          <div className="lg:col-span-7 space-y-6 pb-20">
-            
-            <Section title="Business Details">
-              <div className="grid grid-cols-2 gap-4">
-                <Input label="Business Name" value={data.businessName} onChange={e => updateField('businessName', e.target.value)} />
-                <Input label="TRN (VAT Number)" value={data.businessTRN} onChange={e => updateField('businessTRN', e.target.value)} />
-                <TextArea label="Address" value={data.businessAddress} onChange={e => updateField('businessAddress', e.target.value)} />
-                <TextArea label="Contact Info" value={data.businessContact} onChange={e => updateField('businessContact', e.target.value)} />
+        {/* RIGHT SECTION: Invoice Preview */}
+        <div className="invoice-preview-wrapper card sticky top-4">
+          <div className="invoice-paper" id="invoicePreview">
+            {/* Header */}
+            <div className="flex justify-between items-start mb-12">
+              <div className="flex-1">
+                <h1 style={{fontSize: '3rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.5rem'}}>{invoice.invoiceTitle}</h1>
+                <h2 style={{fontSize: '1.5rem', fontWeight: 700}}>{invoice.billedBy.name || "YOUR COMPANY NAME"}</h2>
+                <p style={{fontSize: '0.8rem', color: '#4b5563', marginTop: '0.25rem'}}>{invoice.billedBy.address}</p>
+                <p style={{fontSize: '0.8rem', color: '#4b5563'}}>TRN: {invoice.billedBy.taxId}</p>
               </div>
-            </Section>
-
-            <Section title="Client Details">
-              <div className="grid grid-cols-2 gap-4">
-                <Input label="Client Name" value={data.clientName} onChange={e => updateField('clientName', e.target.value)} />
-                <Input label="Client TRN" value={data.clientTRN} onChange={e => updateField('clientTRN', e.target.value)} />
-                <TextArea label="Client Address" value={data.clientAddress} onChange={e => updateField('clientAddress', e.target.value)} />
-                <Input label="Client Email" value={data.clientEmail} onChange={e => updateField('clientEmail', e.target.value)} />
+              <div className="company-logo-placeholder">
+                <img src={invoice.billedBy.logo} alt="Company Logo" style={{maxWidth: '100%', maxHeight: '100%', objectFit: 'contain'}} />
+                {!invoice.billedBy.logo && 'LOGO'}
               </div>
-            </Section>
+            </div>
 
-            <Section title="Invoice Meta">
-              <div className="grid grid-cols-3 gap-4">
-                <Input label="Invoice No" value={data.invoiceNo} onChange={e => updateField('invoiceNo', e.target.value)} />
-                <Input label="Date" type="date" value={data.date} onChange={e => updateField('date', e.target.value)} />
-                <Input label="Due Date" type="date" value={data.dueDate} onChange={e => updateField('dueDate', e.target.value)} />
-                <Select label="Currency" value={data.currency} onChange={e => updateField('currency', e.target.value)} options={['AED', 'USD', 'EUR', 'GBP', 'SAR']} />
-                <Input label="PO / Reference" value={data.reference} onChange={e => updateField('reference', e.target.value)} />
-                <Input label="Payment Terms" value={data.paymentTerms} onChange={e => updateField('paymentTerms', e.target.value)} />
+            {/* Invoice Meta & Client Details */}
+            <div className="flex justify-between gap-10 mb-12 border-y border-slate-100 py-8">
+              <div className="flex-1 space-y-1">
+                <span className="input-label" style={{color: '#2563eb'}}>BILLED TO</span>
+                <p style={{fontSize: '1rem', fontWeight: 700}}>{invoice.billedTo.name || "Client Name"}</p>
+                <p style={{fontSize: '0.8rem', color: '#4b5563'}}>{invoice.billedTo.address}</p>
+                {invoice.billedTo.taxId && <p style={{fontSize: '0.8rem', color: '#4b5563'}}>TRN: {invoice.billedTo.taxId}</p>}
               </div>
-            </Section>
+              <div style={{width: '240px'}} className="space-y-1">
+                <div className="flex justify-between"><span className="input-label">Invoice #</span><span className="font-bold text-sm">{invoice.invoiceNumber}</span></div>
+                <div className="flex justify-between"><span className="input-label">Issue Date</span><span className="font-bold text-sm">{invoice.issueDate}</span></div>
+                <div className="flex justify-between"><span className="input-label">Due Date</span><span className="font-bold text-sm">{invoice.dueDate}</span></div>
+                <div className="flex justify-between"><span className="input-label">Currency</span><span className="font-bold text-sm">{invoice.currency}</span></div>
+                {invoice.poReference && <div className="flex justify-between"><span className="input-label">PO Ref.</span><span className="font-bold text-sm">{invoice.poReference}</span></div>}
+              </div>
+            </div>
 
-            <Section title="Line Items">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left mb-4">
-                  <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-bold">
-                    <tr>
-                      <th className="p-2 w-1/3">Item & Desc</th>
-                      <th className="p-2 w-16">Qty</th>
-                      <th className="p-2 w-24">Rate</th>
-                      <th className="p-2 w-20">Disc Amt</th>
-                      <th className="p-2 w-16">VAT %</th>
-                      <th className="p-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.items.map((item) => (
-                      <tr key={item.id} className="border-b">
-                        <td className="p-2">
-                          <input className="w-full border rounded p-1 mb-1 font-bold" placeholder="Name" value={item.name} onChange={e => updateItem(item.id, 'name', e.target.value)} />
-                          <input className="w-full border rounded p-1 text-xs text-gray-500" placeholder="Description" value={item.desc} onChange={e => updateItem(item.id, 'desc', e.target.value)} />
-                        </td>
-                        <td className="p-2"><input type="number" className="w-full border rounded p-1 text-center" value={item.qty} onChange={e => updateItem(item.id, 'qty', e.target.value)} /></td>
-                        <td className="p-2"><input type="number" className="w-full border rounded p-1 text-right" value={item.rate} onChange={e => updateItem(item.id, 'rate', e.target.value)} /></td>
-                        <td className="p-2"><input type="number" className="w-full border rounded p-1 text-right" value={item.discount} onChange={e => updateItem(item.id, 'discount', e.target.value)} /></td>
-                        <td className="p-2"><input type="number" className="w-full border rounded p-1 text-center" value={item.vat} onChange={e => updateItem(item.id, 'vat', e.target.value)} /></td>
-                        <td className="p-2 text-right">
-                          <button onClick={() => removeItem(item.id)} className="text-red-500 font-black hover:bg-red-50 p-1 rounded">X</button>
-                        </td>
-                      </tr>
+            {/* Items Table */}
+            <table className="invoice-table mb-8">
+              <thead>
+                <tr>
+                  {invoice.columns.filter(c => c.visible && c.print).map(col => (
+                    <th key={col.key} style={{width: col.width}}>{col.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {calculatedTotals.items.map((item, idx) => (
+                  <tr key={item.id}>
+                    {invoice.columns.filter(c => c.visible && c.print).map(col => (
+                      <td key={col.key} className={col.isPrivate ? 'private-col-print-hidden' : ''}>
+                        {col.key === 'sn' ? (idx + 1) :
+                         col.key === 'total' ? (item.grossAmount || 0).toFixed(2) :
+                         item[col.key]}
+                      </td>
                     ))}
-                  </tbody>
-                </table>
-                <button onClick={addItem} className="text-blue-600 font-bold text-sm bg-blue-50 px-4 py-2 rounded hover:bg-blue-100">+ Add Line Item</button>
-              </div>
-            </Section>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-            <Section title="Financial Configuration & Totals">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-4 border-r pr-6">
-                  <Input label="Extra Charges" type="number" value={data.extraCharges} onChange={e => updateField('extraCharges', e.target.value)} />
-                  <Input label="Global Discount (Amount)" type="number" value={data.overallDiscount} onChange={e => updateField('overallDiscount', e.target.value)} />
-                  <Input label="TDS Withholding %" type="number" value={data.tdsRate} onChange={e => updateField('tdsRate', e.target.value)} />
-                  <label className="flex items-center gap-2 text-sm font-bold bg-gray-50 p-2 rounded border">
-                    <input type="checkbox" checked={data.config.taxInclusive} onChange={e => setData(prev => ({...prev, config: {taxInclusive: e.target.checked}}))} />
-                    Tax Inclusive Prices
-                  </label>
-                  <div className="flex gap-2">
-                    <button onClick={() => updateField('manualRounding', 'up')} className={`flex-1 p-2 border rounded text-xs font-bold ${data.manualRounding === 'up' ? 'bg-blue-600 text-white' : 'bg-white'}`}>Round Up</button>
-                    <button onClick={() => updateField('manualRounding', 'down')} className={`flex-1 p-2 border rounded text-xs font-bold ${data.manualRounding === 'down' ? 'bg-blue-600 text-white' : 'bg-white'}`}>Round Down</button>
-                    <button onClick={() => updateField('manualRounding', null)} className={`flex-1 p-2 border rounded text-xs font-bold ${!data.manualRounding ? 'bg-gray-800 text-white' : 'bg-white'}`}>Auto</button>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <Input label="Theme Color" type="color" value={data.themeColor} onChange={e => updateField('themeColor', e.target.value)} />
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Upload Logo</label>
-                    <input type="file" accept="image/*" onChange={handleLogoUpload} className="w-full text-sm border p-1 rounded bg-white" />
-                  </div>
-                  <TextArea label="Bank Details" value={data.bankDetails} onChange={e => updateField('bankDetails', e.target.value)} />
-                </div>
+            {/* Totals Summary */}
+            <div className="totals-summary">
+              <div className="totals-row"><span>Subtotal (Net)</span> <span>{calculatedTotals.subtotal.toFixed(2)}</span></div>
+              {calculatedTotals.totalLineDiscount !== 0 && <div className="totals-row"><span>Line Discounts</span> <span>-{calculatedTotals.totalLineDiscount.toFixed(2)}</span></div>}
+              {calculatedTotals.totalGlobalDiscount !== 0 && <div className="totals-row"><span>Global Discount</span> <span>-{calculatedTotals.totalGlobalDiscount.toFixed(2)}</span></div>}
+              {calculatedTotals.totalExtraCharges !== 0 && <div className="totals-row"><span>Extra Charges</span> <span>{calculatedTotals.totalExtraCharges.toFixed(2)}</span></div>}
+              {Object.entries(calculatedTotals.taxSummary).map(([rate, amount]) => (
+                <div key={rate} className="totals-row text-xs text-slate-500"><span>VAT @ {rate}%</span> <span>{amount.toFixed(2)}</span></div>
+              ))}
+              {calculatedTotals.tdsAmount !== 0 && <div className="totals-row" style={{color: '#dc2626'}}><span>TDS Deduction</span> <span>-{calculatedTotals.tdsAmount.toFixed(2)}</span></div>}
+              {calculatedTotals.roundingAdjustment !== 0 && <div className="totals-row text-xs text-slate-500 italic"><span>Rounding Adj.</span> <span>{calculatedTotals.roundingAdjustment.toFixed(2)}</span></div>}
+              <div className="totals-row grand-total">
+                <span>Total Due</span>
+                <span>{invoice.currency} {calculatedTotals.grandTotal.toLocaleString(undefined, { minimumFractionDigits: invoice.config.precision })}</span>
               </div>
-            </Section>
-
-            <Section title="Footer Notes">
-              <div className="grid grid-cols-2 gap-4">
-                <TextArea label="Invoice Notes" value={data.notes} onChange={e => updateField('notes', e.target.value)} />
-                <TextArea label="Terms & Conditions" value={data.terms} onChange={e => updateField('terms', e.target.value)} />
-              </div>
-            </Section>
-
-            {/* Mobile Action Buttons */}
-            <div className="flex flex-col gap-2 md:hidden pt-4">
-               <button onClick={downloadPDF} className="bg-blue-600 text-white px-6 py-4 rounded-xl font-bold w-full text-lg shadow-xl">Download PDF</button>
+              <p className="text-right text-xs text-slate-500 mt-2">{InvoiceLogic.numberToWords(calculatedTotals.grandTotal)}</p>
             </div>
-          </div>
 
-          {/* RIGHT: LIVE PREVIEW */}
-          <div className="lg:col-span-5">
-            <div className="sticky top-6">
-              <div className="bg-white p-3 rounded-t-xl border-b flex justify-between items-center shadow-sm">
-                <span className="font-bold text-sm text-gray-600">Live Preview</span>
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-bold">Auto-syncing</span>
+            {/* Footer Notes, Terms, Signature */}
+            <div style={{marginTop: '4rem'}}>
+              <h3 className="input-label">Invoice Notes</h3>
+              <p style={{fontSize: '0.8rem', color: '#4b5563'}}>{invoice.invoiceNotes}</p>
+              <h3 className="input-label mt-4">Terms & Conditions</h3>
+              <p style={{fontSize: '0.8rem', color: '#4b5563'}}>{invoice.paymentTerms}</p>
+            </div>
+
+            <div className="flex justify-between items-end mt-20">
+              <div className="w-48 text-center border-t border-slate-200 pt-2">
+                <span className="text-xs text-slate-500">Customer Signature</span>
               </div>
-              
-              <div className="overflow-auto shadow-2xl rounded-b-xl border border-gray-200" style={{ maxHeight: 'calc(100vh - 100px)' }}>
-                {/* A4 CANVAS */}
-                <div ref={previewRef} className="bg-white mx-auto text-gray-800" style={{ width: '210mm', minHeight: '297mm', padding: '15mm', boxSizing: 'border-box' }}>
-                  
-                  {/* Print Header */}
-                  <div className="flex justify-between items-start mb-8">
-                    <div className="flex-1 pr-4">
-                      <h1 style={{ color: data.themeColor }} className="text-3xl font-black uppercase tracking-tight mb-4">Tax Invoice</h1>
-                      <div className="text-lg font-bold">{data.businessName || 'Business Name'}</div>
-                      <div className="text-xs text-gray-500 whitespace-pre-wrap mt-1">{data.businessAddress}</div>
-                      <div className="text-xs text-gray-500 mt-1">{data.businessContact}</div>
-                      {data.businessTRN && <div className="text-xs font-bold text-gray-700 mt-1">TRN: {data.businessTRN}</div>}
-                    </div>
-                    <div className="w-40 text-right">
-                      {logoBase64 ? (
-                        <img src={logoBase64} alt="Logo" className="max-h-20 ml-auto object-contain" />
-                      ) : (
-                        <div className="h-16 w-32 ml-auto bg-gray-50 border-2 border-dashed flex items-center justify-center text-[10px] text-gray-400 font-bold">LOGO</div>
-                      )}
-                      <div className="mt-4 text-xs text-gray-600 text-right space-y-1">
-                        <div><span className="font-bold">Invoice No:</span> {data.invoiceNo}</div>
-                        <div><span className="font-bold">Date:</span> {data.date}</div>
-                        {data.dueDate && <div><span className="font-bold">Due Date:</span> {data.dueDate}</div>}
-                        {data.reference && <div><span className="font-bold">PO Ref:</span> {data.reference}</div>}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Print Billing */}
-                  <div className="flex justify-between mb-8 pb-6 border-b border-gray-100">
-                    <div className="w-1/2">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Billed To</div>
-                      <div className="font-bold text-sm">{data.clientName || 'Client Name'}</div>
-                      <div className="text-xs text-gray-500 whitespace-pre-wrap mt-1">{data.clientAddress}</div>
-                      <div className="text-xs text-gray-500 mt-1">{data.clientEmail}</div>
-                      {data.clientTRN && <div className="text-xs font-bold text-gray-700 mt-1">TRN: {data.clientTRN}</div>}
-                    </div>
-                    <div className="w-1/3">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Payment Details</div>
-                      <div className="text-xs text-gray-600"><span className="font-bold">Currency:</span> {data.currency}</div>
-                      {data.paymentTerms && <div className="text-xs text-gray-600 mt-1"><span className="font-bold">Terms:</span> {data.paymentTerms}</div>}
-                    </div>
-                  </div>
-
-                  {/* Print Table */}
-                  <table className="w-full text-xs mb-6 border-collapse">
-                    <thead>
-                      <tr className="border-b-2" style={{ borderColor: data.themeColor }}>
-                        <th className="py-2 text-left w-2/5 font-bold">Description</th>
-                        <th className="py-2 text-center font-bold">Qty</th>
-                        <th className="py-2 text-right font-bold">Rate</th>
-                        <th className="py-2 text-right font-bold">VAT%</th>
-                        <th className="py-2 text-right font-bold">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {totals.items.map((item, idx) => (
-                        <tr key={idx}>
-                          <td className="py-3">
-                            <div className="font-bold text-gray-800">{item.name}</div>
-                            {item.desc && <div className="text-[10px] text-gray-500 mt-1">{item.desc}</div>}
-                          </td>
-                          <td className="py-3 text-center">{item.qty}</td>
-                          <td className="py-3 text-right">{Number(item.rate).toFixed(2)}</td>
-                          <td className="py-3 text-right">{item.vat}%</td>
-                          <td className="py-3 text-right font-bold">{item.total.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  {/* Print Totals */}
-                  <div className="flex justify-between items-start mb-12">
-                    <div className="w-1/2 pr-4">
-                       {data.bankDetails && (
-                         <div className="bg-gray-50 p-3 rounded text-xs text-gray-600 mb-4 whitespace-pre-wrap border border-gray-100">
-                           <span className="font-bold text-gray-800 block mb-1">Bank Details:</span>
-                           {data.bankDetails}
-                         </div>
-                       )}
-                    </div>
-                    <div className="w-[250px] space-y-2 text-xs">
-                      <div className="flex justify-between text-gray-600"><span>Subtotal</span> <span>{totals.subtotal.toFixed(2)}</span></div>
-                      {totals.totalLineDiscount > 0 && <div className="flex justify-between text-gray-600"><span>Line Discounts</span> <span>-{totals.totalLineDiscount.toFixed(2)}</span></div>}
-                      {totals.taxSummary.map(t => (
-                        <div key={t.rate} className="flex justify-between text-gray-600"><span>VAT @ {t.rate}%</span> <span>{t.amt.toFixed(2)}</span></div>
-                      ))}
-                      {totals.extraCharges > 0 && <div className="flex justify-between text-gray-600"><span>Extra Charges</span> <span>+{totals.extraCharges.toFixed(2)}</span></div>}
-                      {totals.overallDiscount > 0 && <div className="flex justify-between text-gray-600"><span>Global Discount</span> <span>-{totals.overallDiscount.toFixed(2)}</span></div>}
-                      {totals.tdsAmount > 0 && <div className="flex justify-between text-red-600"><span>TDS Deduction</span> <span>-{totals.tdsAmount.toFixed(2)}</span></div>}
-                      {totals.roundingAdj !== 0 && <div className="flex justify-between text-gray-400 italic"><span>Rounding</span> <span>{totals.roundingAdj.toFixed(2)}</span></div>}
-                      
-                      <div className="flex justify-between items-center pt-3 border-t-2" style={{ borderColor: data.themeColor }}>
-                        <span className="font-black text-sm uppercase">Total</span>
-                        <span className="font-black text-lg" style={{ color: data.themeColor }}>{data.currency} {totals.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="text-[9px] text-right font-bold text-gray-400 uppercase tracking-wide mt-1">
-                        {numberToWords(totals.grandTotal, data.currency)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Print Footer */}
-                  <div className="grid grid-cols-2 gap-8 text-xs text-gray-500 mt-auto pt-8 border-t border-gray-100">
-                    <div>
-                      {data.notes && <div className="mb-4"><span className="font-bold text-gray-800 block mb-1">Notes:</span><span className="whitespace-pre-wrap">{data.notes}</span></div>}
-                      {data.terms && <div><span className="font-bold text-gray-800 block mb-1">Terms & Conditions:</span><span className="whitespace-pre-wrap">{data.terms}</span></div>}
-                    </div>
-                    <div className="text-right flex flex-col items-end justify-end">
-                       <div className="w-40 border-b-2 border-gray-300 mb-2 h-16"></div>
-                       <span className="font-bold text-gray-800">Authorized Signatory</span>
-                    </div>
-                  </div>
-                </div>
+              <div className="w-48 text-center border-t border-black pt-2">
+                <span className="text-xs font-bold">Authorized Signatory</span>
               </div>
             </div>
+
           </div>
         </div>
       </div>
     </div>
   );
 }
-
-// --- REUSABLE UI COMPONENTS ---
-const Section = ({ title, children }) => (
-  <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-    <div className="bg-gray-50 px-5 py-3 border-b border-gray-200">
-      <h2 className="font-black text-gray-700 text-sm uppercase tracking-wide">{title}</h2>
-    </div>
-    <div className="p-5">{children}</div>
-  </div>
-);
-
-const Input = ({ label, ...props }) => (
-  <div>
-    <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">{label}</label>
-    <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition bg-white" {...props} />
-  </div>
-);
-
-const TextArea = ({ label, ...props }) => (
-  <div className="col-span-full md:col-span-1">
-    <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">{label}</label>
-    <textarea className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition h-20 resize-none bg-white" {...props} />
-  </div>
-);
-
-const Select = ({ label, options, ...props }) => (
-  <div>
-    <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">{label}</label>
-    <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition bg-white" {...props}>
-      {options.map(o => <option key={o} value={o}>{o}</option>)}
-    </select>
-  </div>
-);

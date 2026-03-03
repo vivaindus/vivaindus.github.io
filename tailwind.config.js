@@ -1,14 +1,14 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./pages/invoice-engine/**/*.js",
-    "./engine-data/**/*.js",
+    "./pages/invoice-engine/**/*.{js,ts,jsx,tsx}", // Target only invoice
+    "./engine-data/**/*.{js,ts,jsx,tsx}",         // Target only invoice logic
   ],
   theme: {
     extend: {},
   },
-  // This prevents Tailwind from resetting global styles for your other calculators
   corePlugins: {
-    preflight: false,
-  }
+    preflight: false, // Prevents Tailwind from affecting other pages
+  },
+  plugins: [], // No Tailwind Forms needed with our custom inputs
 }
