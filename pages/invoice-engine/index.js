@@ -1,448 +1,241 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { InvoiceLogicEngine } from '../../engine-data/logic'; // Our financial engine
-import { invoiceStyles } from './styles'; // Dedicated styles
+import React, { useState, useMemo } from 'react';
+import { EnterpriseInvoiceEngine } from '../../engine-data/logic';
 
-export default function EnterpriseInvoiceApp() {
-  const [status, setStatus] = useState('DRAFT'); // DRAFT, FINAL, CANCELLED
-  const [currentRevision, setCurrentRevision] = useState(1);
-  const [showValidationErrors, setShowValidationErrors] = useState(false);
+const enterpriseCSS = `
+  .app-bg { background: #f0f2f5; min-height: 100vh; padding: 40px 20px; font-family: 'Inter', system-ui, sans-serif; }
+  .split-layout { display: flex; flex-direction: column; gap: 30px; max-width: 1600px; margin: 0 auto; }
+  @media (min-width: 1200px) { .split-layout { flex-direction: row; } }
+  
+  .editor-pane { flex: 1; display: flex; flex-direction: column; gap: 20px; min-width: 350px; }
+  .preview-pane { width: 100%; max-width: 210mm; position: sticky; top: 40px; margin: 0 auto; }
+  
+  .editor-card { background: white; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+  .invoice-paper { background: white; width: 210mm; min-height: 297mm; padding: 60px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); position: relative; }
+  
+  .r-input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 14px; transition: all 0.2s; background: #fff; }
+  .r-input:hover:not(:disabled) { border-color: #cbd5e1; background: #f8fafc; }
+  .r-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+  .label-tiny { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; }
+  
+  .paper-table { width: 100%; border-collapse: collapse; margin: 40px 0; }
+  .paper-table th { background: #f8fafc; text-align: left; padding: 12px; font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 800; border-bottom: 2px solid #e2e8f0; }
+  .paper-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
 
-  // Invoice Data State - Comprehensive to match all Refrens.com features
+  .btn-lock { background: #000; color: #fff; width: 100%; padding: 16px; border-radius: 10px; font-weight: 800; border: none; cursor: pointer; transition: 0.2s; }
+  .btn-lock:hover { background: #1a1a1a; transform: translateY(-1px); }
+  .btn-line { background: none; border: 1px dashed #cbd5e1; color: #64748b; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; width: 100%; }
+
+  .total-block { width: 350px; margin-left: auto; margin-top: 50px; }
+  .total-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; color: #475569; }
+  .grand-row { border-top: 3px solid #000; margin-top: 15px; padding-top: 15px; font-weight: 900; font-size: 24px; color: #000; display: flex; justify-content: space-between; }
+  
+  .tag { display: inline-block; padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 20px; font-size: 10px; margin: 2px; cursor: pointer; font-weight: 700; background: #fff; }
+  .tag.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+
+  @media print {
+    .no-print { display: none !important; }
+    .app-bg { padding: 0; background: white; }
+    .invoice-paper { box-shadow: none; border: none; padding: 15mm; width: 100%; height: auto; }
+    thead { display: table-header-group; }
+    .private-col { display: none !important; }
+  }
+`;
+
+export default function EnterpriseRefrensApp() {
+  const [status, setStatus] = useState('DRAFT');
   const [invoice, setInvoice] = useState({
-    invoiceTitle: "Tax Invoice",
-    invoiceNumber: "INV-2026-0001",
-    issueDate: new Date().toISOString().split('T')[0],
+    title: "Tax Invoice",
+    invoiceNo: "INV-2026-0001",
+    date: new Date().toISOString().split('T')[0],
     dueDate: "",
-    supplyDate: "",
-    poReference: "",
     currency: "AED",
-    exchangeRate: 1.0,
-    reverseCharge: false,
-    
-    // Business Details
-    billedBy: { name: "", taxId: "", address: "", phone: "", email: "", website: "", bankDetails: "" },
-    
-    // Client Details
-    billedTo: { name: "", taxId: "", address: "", shippingAddress: "", phone: "", email: "" },
-    
-    // Line Items & Dynamic Columns
+    billedBy: { name: "", taxId: "", address: "" },
+    billedTo: { name: "", taxId: "", address: "" },
+    items: [{ id: Date.now(), name: "", qty: 1, unitPrice: 0, taxRate: 5 }],
     columns: [
-      { key: 'sn', label: 'SN', visible: true, width: '40px', print: true },
-      { key: 'itemCode', label: 'Item Code', visible: false, width: '80px', print: true },
-      { key: 'name', label: 'Item', visible: true, width: 'auto', print: true },
-      { key: 'description', label: 'Description', visible: true, width: '200px', print: true },
-      { key: 'hsn', label: 'HSN/SAC', visible: false, width: '80px', print: true },
-      { key: 'qty', label: 'Qty', visible: true, width: '70px', print: true },
-      { key: 'unit', label: 'Unit', visible: false, width: '60px', print: true },
-      { key: 'unitPrice', label: 'Rate', visible: true, width: '100px', print: true },
-      { key: 'lineCharge', label: 'Charge', visible: false, width: '80px', print: true },
-      { key: 'lineDiscount', label: 'Discount', visible: true, width: '80px', print: true },
-      { key: 'taxRate', label: 'VAT %', visible: true, width: '70px', print: true },
-      { key: 'netAmount', label: 'Net Amt', visible: false, width: '100px', print: true },
-      { key: 'taxAmount', label: 'Tax Amt', visible: false, width: '100px', print: true },
-      { key: 'grossAmount', label: 'Gross Amt', visible: false, width: '100px', print: true },
-      { key: 'total', label: 'Amount', visible: true, width: '120px', print: true },
-      { key: 'costPrice', label: 'Cost', visible: false, width: '80px', isPrivate: true, print: false } // Private & hidden in print
+      { key: 'sn', label: 'SN', visible: true, width: '40px' },
+      { key: 'name', label: 'Description', visible: true, width: 'auto' },
+      { key: 'qty', label: 'Qty', visible: true, width: '70px' },
+      { key: 'unitPrice', label: 'Rate', visible: true, width: '100px' },
+      { key: 'taxRate', label: 'VAT %', visible: true, width: '80px' },
+      { key: 'lineTotal', label: 'Total', visible: true, width: '120px' },
+      { key: 'costPrice', label: 'Cost', visible: false, isPrivate: true }
     ],
-    items: [{ 
-      id: Date.now(), name: "Service A", description: "", hsn: "", qty: 1, unit: "Pcs", unitPrice: 100, 
-      lineCharge: 0, chargeType: 'fixed', // Line-level charge
-      lineDiscount: 0, discountType: 'percent', // Line-level discount
-      taxRate: 5, itemCode: "", costPrice: 0 
-    }],
-
-    // Global Adjustments
-    globalDiscount: { value: 0, type: 'percent', layer: 'before_tax', print: true }, // Global discount config
-    extraCharges: [{ id: 'shipping', name: 'Shipping', value: 0, taxable: true, taxRate: 5, print: true }], // Extra charges
-    tdsRate: 0, // TDS rate
-
-    // Calculation & UI Config
-    config: { roundingMode: 'HALF_EVEN', precision: 2, taxInclusive: false },
-    manualRounding: null, // 'up' or 'down'
-
-    // Document Footer
-    invoiceNotes: "Thank you for your business. We appreciate your prompt payment.",
-    paymentTerms: "Payment due within 30 days.",
-    signatureImage: null, // Base64 or URL for signature
-    qrCodePlaceholder: true, // Show QR code placeholder
+    globalDiscount: { value: 0, type: 'percent', layer: 'before_tax' },
+    extraCharges: [],
+    tdsRate: 0,
+    manualRounding: null,
+    config: { roundingMode: 'HALF_EVEN', precision: 2, taxInclusive: false }
   });
 
-  // Calculate totals using the financial engine
-  const calculatedTotals = useMemo(() => {
-    const engine = new InvoiceLogic(invoice.config);
+  const totals = useMemo(() => {
+    const engine = new EnterpriseInvoiceEngine(invoice.config);
     return engine.calculate(invoice);
   }, [invoice]);
 
-  const validationErrors = useMemo(() => InvoiceLogic.validate(invoice), [invoice]);
-
   const isLocked = status === 'FINAL';
 
-  // --- UI Update Handlers ---
-  const updateInvoice = (field, value, path = []) => {
-    const newState = JSON.parse(JSON.stringify(invoice)); // Deep copy for immutability
-    let current = newState;
-    for (let i = 0; i < path.length; i++) {
-      if (i === path.length - 1) {
-        current[path[i]][field] = value;
-      } else {
-        current = current[path[i]];
-      }
-    }
-    if (path.length === 0) { // Top-level field
-      newState[field] = value;
-    }
-    setInvoice(newState);
+  const updateItem = (id, field, value) => {
+    if (isLocked) return;
+    const next = invoice.items.map(it => it.id === id ? { ...it, [field]: value } : it);
+    setInvoice({ ...invoice, items: next });
   };
 
-  const updateItem = (itemId, field, value) => {
-    setInvoice(prev => ({
-      ...prev,
-      items: prev.items.map(item =>
-        item.id === itemId ? { ...item, [field]: value } : item
-      )
-    }));
-  };
-
-  const addItemRow = () => {
-    setInvoice(prev => ({
-      ...prev,
-      items: [...prev.items, {
-        id: Date.now(), name: "", description: "", hsn: "", qty: 1, unit: "Pcs", unitPrice: 0,
-        lineCharge: 0, chargeType: 'fixed',
-        lineDiscount: 0, discountType: 'percent',
-        taxRate: 5, itemCode: "", costPrice: 0
-      }]
-    }));
-  };
-
-  const removeItemRow = (idToRemove) => {
-    setInvoice(prev => ({
-      ...prev,
-      items: prev.items.filter(item => item.id !== idToRemove)
-    }));
-  };
-
-  const toggleColumnVisibility = (key) => {
-    setInvoice(prev => ({
-      ...prev,
-      columns: prev.columns.map(col =>
-        col.key === key ? { ...col, visible: !col.visible } : col
-      )
-    }));
-  };
-
-  const toggleColumnPrintVisibility = (key) => {
-    setInvoice(prev => ({
-      ...prev,
-      columns: prev.columns.map(col =>
-        col.key === key ? { ...col, print: !col.print } : col
-      )
-    }));
-  };
-
-  const handleFinalize = () => {
-    if (validationErrors.length > 0) {
-      setShowValidationErrors(true);
-      alert("Please fix validation errors before finalizing.");
-      return;
-    }
-    if (window.confirm("Finalizing this invoice will lock it for editing. Continue?")) {
-      setStatus('FINAL');
-      // In a real app, this would save to Supabase / backend and mark as immutable
-      // For this prototype, it just locks the UI
-    }
-  };
-
-  const handleCreateNewRevision = () => {
-    if (window.confirm("Creating a new revision will unlock the invoice for editing. Continue?")) {
-      setStatus('DRAFT');
-      setCurrentRevision(prev => prev + 1);
-      // In a real app, this would create a new entry in a revision history table
-    }
-  };
-
-  const handleDownloadPDF = () => {
-    window.print(); // Uses browser's native print to PDF for selectable text
-  };
-
-  // --- Render ---
   return (
-    <div className="refrens-layout">
-      {/* Inject styles dynamically */}
-      <style>{invoiceStyles}</style>
-
-      {/* Validation Errors Overlay */}
-      {showValidationErrors && validationErrors.length > 0 && (
-        <div className="no-print" style={{position: 'fixed', top: '1rem', right: '1rem', background: '#fef2f2', border: '1px solid #ef4444', color: '#b91c1c', padding: '1rem', borderRadius: '0.5rem', zIndex: 1000, maxWidth: '300px'}}>
-          <h3 style={{marginTop: 0, fontSize: '1rem'}}>Validation Errors:</h3>
-          <ul style={{margin: 0, paddingLeft: '1.2rem', listStyleType: 'disc'}}>
-            {validationErrors.map((error, idx) => (
-              <li key={idx} style={{marginBottom: '0.25rem', fontSize: '0.85rem'}}>{error}</li>
-            ))}
-          </ul>
-          <button onClick={() => setShowValidationErrors(false)} className="btn btn-secondary btn-small mt-3">Dismiss</button>
-        </div>
-      )}
-
-      <div className="grid-container">
-        {/* LEFT SECTION: Editor Controls */}
-        <div className="controls-panel space-y-4 no-print">
-          {/* Main Actions */}
-          <div className="card">
-            <h2 className="card-header">Document Actions</h2>
-            <button className="btn btn-primary w-full mb-2" onClick={handleFinalize} disabled={isLocked}>
-              {isLocked ? '🔒 Finalized & Locked' : 'Finalize & Lock'}
+    <div className="app-bg">
+      <style>{enterpriseCSS}</style>
+      <div className="split-layout">
+        
+        {/* LEFT: POWER EDITOR */}
+        <div className="editor-pane no-print">
+          <div className="editor-card">
+            <button className="btn-lock" onClick={() => setStatus('FINAL')} disabled={isLocked}>
+              {isLocked ? '🔒 DOCUMENT LOCKED' : 'FINALIZE & DOWNLOAD'}
             </button>
-            <button className="btn btn-secondary w-full" onClick={handleDownloadPDF}>
-              Download PDF
-            </button>
-            {isLocked && (
-              <button className="btn btn-outline w-full mt-2" onClick={handleCreateNewRevision}>
-                Create New Revision (Unlock)
-              </button>
-            )}
+            <button className="btn-secondary mt-3" onClick={() => window.print()}>PRINT PDF</button>
+            {isLocked && <button className="btn-secondary mt-3 text-red-600 border-red-100" onClick={() => setStatus('DRAFT')}>UNLOCK FOR EDITING</button>}
           </div>
 
-          {/* Core Invoice Details */}
-          <div className="card">
-            <h2 className="card-header">Invoice Details</h2>
-            <div className="mb-3">
-              <label className="input-label">Invoice Title</label>
-              <input className="r-input" value={invoice.invoiceTitle} onChange={e => updateInvoice('invoiceTitle', e.target.value)} disabled={isLocked} />
+          <div className="editor-card">
+            <span className="label-tiny">Invoice Meta</span>
+            <div className="grid grid-cols-2 gap-4 mt-2">
+              <input className="r-input" placeholder="Invoice #" defaultValue={invoice.invoiceNo} onChange={e => setInvoice({...invoice, invoiceNo: e.target.value})} disabled={isLocked} />
+              <input className="r-input" type="date" defaultValue={invoice.date} disabled={isLocked} />
             </div>
-            <div className="mb-3">
-              <label className="input-label">Invoice Number</label>
-              <input className="r-input" value={invoice.invoiceNumber} onChange={e => updateInvoice('invoiceNumber', e.target.value)} disabled={isLocked} />
-            </div>
-            <div className="row mb-3">
-              <div>
-                <label className="input-label">Issue Date</label>
-                <input type="date" className="r-input" value={invoice.issueDate} onChange={e => updateInvoice('issueDate', e.target.value)} disabled={isLocked} />
-              </div>
-              <div>
-                <label className="input-label">Due Date</label>
-                <input type="date" className="r-input" value={invoice.dueDate} onChange={e => updateInvoice('dueDate', e.target.value)} disabled={isLocked} />
-              </div>
-            </div>
-            <div className="mb-3">
-              <label className="input-label">PO Reference</label>
-              <input className="r-input" value={invoice.poReference} onChange={e => updateInvoice('poReference', e.target.value)} disabled={isLocked} />
-            </div>
-            <div className="row mb-3">
-              <div>
-                <label className="input-label">Currency</label>
-                <select className="r-select" value={invoice.currency} onChange={e => updateInvoice('currency', e.target.value)} disabled={isLocked}>
-                  <option value="AED">AED</option>
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                  <option value="INR">INR</option>
-                </select>
-              </div>
-              <div>
-                <label className="input-label">Exchange Rate</label>
-                <input type="number" step="0.0001" className="r-input" value={invoice.exchangeRate} onChange={e => updateInvoice('exchangeRate', parseFloat(e.target.value))} disabled={isLocked} />
-              </div>
+            <select className="r-input mt-3" onChange={e => setInvoice({...invoice, currency: e.target.value})} disabled={isLocked}>
+                <option value="AED">AED - Dirham</option>
+                <option value="USD">USD - Dollar</option>
+                <option value="EUR">EUR - Euro</option>
+            </select>
+          </div>
+
+          <div className="editor-card">
+            <span className="label-tiny">Your Business Details</span>
+            <input className="r-input font-bold" placeholder="Business Name" onChange={e => setInvoice({...invoice, billedBy: {...invoice.billedBy, name: e.target.value}})} disabled={isLocked} />
+            <input className="r-input mt-2" placeholder="TRN / VAT ID" onChange={e => setInvoice({...invoice, billedBy: {...invoice.billedBy, taxId: e.target.value}})} disabled={isLocked} />
+            <textarea className="r-input mt-2 h-20" placeholder="Address" onChange={e => setInvoice({...invoice, billedBy: {...invoice.billedBy, address: e.target.value}})} disabled={isLocked} />
+          </div>
+
+          <div className="editor-card">
+            <span className="label-tiny">Client Details</span>
+            <input className="r-input font-bold" placeholder="Client Name" onChange={e => setInvoice({...invoice, billedTo: {...invoice.billedTo, name: e.target.value}})} disabled={isLocked} />
+            <textarea className="r-input mt-2 h-20" placeholder="Client Address" onChange={e => setInvoice({...invoice, billedTo: {...invoice.billedTo, address: e.target.value}})} disabled={isLocked} />
+          </div>
+
+          <div className="editor-card">
+            <span className="label-tiny">Toggle Columns</span>
+            <div className="flex flex-wrap mt-2">
+               {invoice.columns.map(c => (
+                 <div key={c.key} className={`tag ${c.visible ? 'active' : ''}`} onClick={() => {
+                   const next = invoice.columns.map(col => col.key === c.key ? {...col, visible: !col.visible} : col);
+                   setInvoice({...invoice, columns: next});
+                 }}>{c.label}</div>
+               ))}
             </div>
           </div>
 
-          {/* Business & Client Details */}
-          <div className="card">
-            <h2 className="section-heading">Business Details</h2>
-            <div className="mb-3"><label className="input-label">Company Name</label><input className="r-input" value={invoice.billedBy.name} onChange={e => updateInvoice('name', e.target.value, ['billedBy'])} disabled={isLocked} /></div>
-            <div className="mb-3"><label className="input-label">TRN / Tax ID</label><input className="r-input" value={invoice.billedBy.taxId} onChange={e => updateInvoice('taxId', e.target.value, ['billedBy'])} disabled={isLocked} /></div>
-            <div className="mb-3"><label className="input-label">Address</label><textarea className="r-textarea" value={invoice.billedBy.address} onChange={e => updateInvoice('address', e.target.value, ['billedBy'])} disabled={isLocked} /></div>
-            <h2 className="section-heading mt-4">Client Details</h2>
-            <div className="mb-3"><label className="input-label">Client Name</label><input className="r-input" value={invoice.billedTo.name} onChange={e => updateInvoice('name', e.target.value, ['billedTo'])} disabled={isLocked} /></div>
-            <div className="mb-3"><label className="input-label">Client TRN</label><input className="r-input" value={invoice.billedTo.taxId} onChange={e => updateInvoice('taxId', e.target.value, ['billedTo'])} disabled={isLocked} /></div>
-            <div className="mb-3"><label className="input-label">Client Address</label><textarea className="r-textarea" value={invoice.billedTo.address} onChange={e => updateInvoice('address', e.target.value, ['billedTo'])} disabled={isLocked} /></div>
-            <button className="field-toggle-btn" onClick={() => updateInvoice('showShippingAddress', !invoice.showShippingAddress, ['billedTo'])}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add Shipping Address
-            </button>
-            {invoice.billedTo.showShippingAddress && (
-                <div className="mb-3 mt-2"><label className="input-label">Shipping Address</label><textarea className="r-textarea" value={invoice.billedTo.shippingAddress} onChange={e => updateInvoice('shippingAddress', e.target.value, ['billedTo'])} disabled={isLocked} /></div>
-            )}
-          </div>
-
-          {/* Line Item & Column Management */}
-          <div className="card">
-            <h2 className="section-heading">Line Items & Columns</h2>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {invoice.columns.map(col => (
-                <span key={col.key} className={`column-control-pill ${col.visible ? 'active' : ''}`} onClick={() => toggleColumnVisibility(col.key)}>
-                  {col.label} {col.isPrivate && ' (P)'}
-                </span>
-              ))}
-            </div>
-            {invoice.items.map((item, idx) => (
-              <div key={item.id} className={`card mb-3 ${isLocked ? 'section-locked' : ''}`}>
-                <div className="card-header">
-                  <h3 style={{fontSize: '1rem'}}>Item #{idx + 1}</h3>
-                  <button className="btn btn-danger btn-small" onClick={() => removeItemRow(item.id)} disabled={isLocked}>X</button>
-                </div>
-                <div className="mb-3"><label className="input-label">Item Name</label><input className="r-input" value={item.name} onChange={e => updateItem(item.id, 'name', e.target.value)} disabled={isLocked} /></div>
-                <div className="mb-3"><label className="input-label">Description</label><textarea className="r-textarea" value={item.description} onChange={e => updateItem(item.id, 'description', e.target.value)} disabled={isLocked} /></div>
-                <div className="row mb-3">
-                  <div><label className="input-label">Qty</label><input type="number" className="r-input" value={item.qty} onChange={e => updateItem(item.id, 'qty', parseFloat(e.target.value))} disabled={isLocked} /></div>
-                  <div><label className="input-label">Unit</label><input className="r-input" value={item.unit} onChange={e => updateItem(item.id, 'unit', e.target.value)} disabled={isLocked} /></div>
-                  <div><label className="input-label">Unit Price</label><input type="number" className="r-input" value={item.unitPrice} onChange={e => updateItem(item.id, 'unitPrice', parseFloat(e.target.value))} disabled={isLocked} /></div>
-                </div>
-                <div className="row mb-3">
-                  <div><label className="input-label">Line Discount (%)</label><input type="number" className="r-input" value={item.lineDiscount} onChange={e => updateItem(item.id, 'lineDiscount', parseFloat(e.target.value))} disabled={isLocked} /></div>
-                  <div><label className="input-label">Tax Rate (%)</label><input type="number" className="r-input" value={item.taxRate} onChange={e => updateItem(item.id, 'taxRate', parseFloat(e.target.value))} disabled={isLocked} /></div>
-                </div>
-              </div>
-            ))}
-            <button className="btn-add-line" onClick={addItemRow} disabled={isLocked}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add New Line
-            </button>
-          </div>
-
-          {/* Global Adjustments */}
-          <div className="card">
-            <h2 className="section-heading">Global Adjustments</h2>
-            <div className="mb-3">
-              <label className="input-label">Global Discount Value</label>
-              <input type="number" className="r-input" value={invoice.globalDiscount.value} onChange={e => updateInvoice('value', parseFloat(e.target.value), ['globalDiscount'])} disabled={isLocked} />
-            </div>
-            <div className="row mb-3">
-              <div>
-                <label className="input-label">Type</label>
-                <select className="r-select" value={invoice.globalDiscount.type} onChange={e => updateInvoice('type', e.target.value, ['globalDiscount'])} disabled={isLocked}>
-                  <option value="fixed">Fixed</option>
-                  <option value="percent">Percentage</option>
-                </select>
-              </div>
-              <div>
-                <label className="input-label">Apply Layer</label>
-                <select className="r-select" value={invoice.globalDiscount.layer} onChange={e => updateInvoice('layer', e.target.value, ['globalDiscount'])} disabled={isLocked}>
-                  <option value="before_tax">Before Tax</option>
-                  <option value="after_tax">After Tax</option>
-                </select>
-              </div>
-            </div>
-            <div className="mb-3">
-              <label className="input-label">TDS Rate (%)</label>
-              <input type="number" className="r-input" value={invoice.tdsRate} onChange={e => updateInvoice('tdsRate', parseFloat(e.target.value))} disabled={isLocked} />
-            </div>
-            <h3 className="input-label mt-4">Extra Charges</h3>
-            {invoice.extraCharges.map(charge => (
-              <div key={charge.id} className="row mb-2">
-                <div><input className="r-input" value={charge.name} onChange={e => updateInvoice('name', e.target.value, ['extraCharges', invoice.extraCharges.findIndex(c => c.id === charge.id)])} disabled={isLocked} /></div>
-                <div><input type="number" className="r-input" value={charge.value} onChange={e => updateInvoice('value', parseFloat(e.target.value), ['extraCharges', invoice.extraCharges.findIndex(c => c.id === charge.id)])} disabled={isLocked} /></div>
-              </div>
-            ))}
-          </div>
-
-          {/* Configuration & Controls */}
-          <div className="card">
-            <h2 className="section-heading">Calculation Config</h2>
-            <div className="mb-3"><label className="input-label">Decimal Precision</label><input type="number" className="r-input" value={invoice.config.precision} onChange={e => updateInvoice('precision', parseInt(e.target.value), ['config'])} disabled={isLocked} /></div>
-            <div className="mb-3"><label className="input-label">Rounding Mode</label><select className="r-select" value={invoice.config.roundingMode} onChange={e => updateInvoice('roundingMode', e.target.value, ['config'])} disabled={isLocked}><option value="HALF_EVEN">Banker's (Half-Even)</option><option value="HALF_UP">Standard (Half-Up)</option></select></div>
-            <div className="mb-3"><label className="input-label">Tax Mode</label><select className="r-select" value={invoice.config.taxInclusive ? 'inclusive' : 'exclusive'} onChange={e => updateInvoice('taxInclusive', e.target.value === 'inclusive', ['config'])} disabled={isLocked}><option value="exclusive">Exclusive</option><option value="inclusive">Inclusive</option></select></div>
-            <h3 className="input-label mt-4">Manual Rounding</h3>
-            <div className="row">
-              <button className="btn btn-outline w-full" onClick={() => updateInvoice('manualRounding', 'up')} disabled={isLocked}>Round Up</button>
-              <button className="btn btn-outline w-full" onClick={() => updateInvoice('manualRounding', 'down')} disabled={isLocked}>Round Down</button>
-              <button className="btn btn-outline w-full" onClick={() => updateInvoice('manualRounding', null)} disabled={isLocked}>Clear</button>
+          <div className="editor-card">
+            <span className="label-tiny">Pipeline Settings</span>
+            <div className="space-y-4 mt-2">
+               <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={invoice.config.taxInclusive} onChange={e => setInvoice({...invoice, config: {...invoice.config, taxInclusive: e.target.checked}})} />
+                  Tax Inclusive Pricing
+               </label>
+               <div className="flex justify-between items-center text-sm">
+                  <span>TDS / Withholding %</span>
+                  <input type="number" className="r-input w-24" onChange={e => setInvoice({...invoice, tdsRate: parseFloat(e.target.value) || 0})} />
+               </div>
+               <div className="flex justify-between items-center text-sm">
+                  <span>Global Discount</span>
+                  <input type="number" className="r-input w-24" placeholder="Value" onChange={e => setInvoice({...invoice, globalDiscount: {...invoice.globalDiscount, value: parseFloat(e.target.value) || 0}})} />
+               </div>
             </div>
           </div>
         </div>
 
-        {/* RIGHT SECTION: Invoice Preview */}
-        <div className="invoice-preview-wrapper card sticky top-4">
-          <div className="invoice-paper" id="invoicePreview">
-            {/* Header */}
-            <div className="flex justify-between items-start mb-12">
-              <div className="flex-1">
-                <h1 style={{fontSize: '3rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.5rem'}}>{invoice.invoiceTitle}</h1>
-                <h2 style={{fontSize: '1.5rem', fontWeight: 700}}>{invoice.billedBy.name || "YOUR COMPANY NAME"}</h2>
-                <p style={{fontSize: '0.8rem', color: '#4b5563', marginTop: '0.25rem'}}>{invoice.billedBy.address}</p>
-                <p style={{fontSize: '0.8rem', color: '#4b5563'}}>TRN: {invoice.billedBy.taxId}</p>
-              </div>
-              <div className="company-logo-placeholder">
-                <img src={invoice.billedBy.logo} alt="Company Logo" style={{maxWidth: '100%', maxHeight: '100%', objectFit: 'contain'}} />
-                {!invoice.billedBy.logo && 'LOGO'}
-              </div>
-            </div>
+        {/* RIGHT: REAL-TIME A4 PREVIEW */}
+        <div className="preview-pane">
+          <div className="invoice-paper">
+            
+            <header className="flex justify-between items-start">
+               <div>
+                  <h1 style={{fontSize: '48px', fontWeight: 900, textTransform: 'uppercase', margin: 0, letterSpacing: '-2px'}}>{invoice.title}</h1>
+                  <p style={{fontSize: '24px', fontWeight: 800, marginTop: '30px', color: '#000'}}>{invoice.billedBy.name || "COMPANY NAME"}</p>
+                  <p style={{fontSize: '13px', color: '#64748b', maxWidth: '350px'}}>{invoice.billedBy.address}</p>
+                  <p style={{fontSize: '11px', fontWeight: 800, color: '#000', marginTop: '10px'}}>TRN: {invoice.billedBy.taxId}</p>
+               </div>
+               <div style={{width: '180px', height: '110px', background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', fontWeight: 900, fontSize: '11px'}}>BUSINESS LOGO</div>
+            </header>
 
-            {/* Invoice Meta & Client Details */}
-            <div className="flex justify-between gap-10 mb-12 border-y border-slate-100 py-8">
-              <div className="flex-1 space-y-1">
-                <span className="input-label" style={{color: '#2563eb'}}>BILLED TO</span>
-                <p style={{fontSize: '1rem', fontWeight: 700}}>{invoice.billedTo.name || "Client Name"}</p>
-                <p style={{fontSize: '0.8rem', color: '#4b5563'}}>{invoice.billedTo.address}</p>
-                {invoice.billedTo.taxId && <p style={{fontSize: '0.8rem', color: '#4b5563'}}>TRN: {invoice.billedTo.taxId}</p>}
-              </div>
-              <div style={{width: '240px'}} className="space-y-1">
-                <div className="flex justify-between"><span className="input-label">Invoice #</span><span className="font-bold text-sm">{invoice.invoiceNumber}</span></div>
-                <div className="flex justify-between"><span className="input-label">Issue Date</span><span className="font-bold text-sm">{invoice.issueDate}</span></div>
-                <div className="flex justify-between"><span className="input-label">Due Date</span><span className="font-bold text-sm">{invoice.dueDate}</span></div>
-                <div className="flex justify-between"><span className="input-label">Currency</span><span className="font-bold text-sm">{invoice.currency}</span></div>
-                {invoice.poReference && <div className="flex justify-between"><span className="input-label">PO Ref.</span><span className="font-bold text-sm">{invoice.poReference}</span></div>}
-              </div>
-            </div>
+            <section className="flex justify-between gap-12 mt-16 py-10 border-y border-slate-100">
+               <div className="flex-1">
+                  <span className="label-tiny" style={{color: '#2563eb'}}>Billed To</span>
+                  <p style={{fontSize: '16px', fontWeight: 800, color: '#000', marginBottom: '5px'}}>{invoice.billedTo.name || "Client Name"}</p>
+                  <p style={{fontSize: '13px', color: '#64748b', whiteSpace: 'pre-wrap'}}>{invoice.billedTo.address}</p>
+               </div>
+               <div style={{width: '240px'}} className="space-y-2">
+                  <div className="flex justify-between text-sm"><span className="label-tiny">Invoice No</span> <span className="font-bold">{invoice.invoiceNo}</span></div>
+                  <div className="flex justify-between text-sm"><span className="label-tiny">Date</span> <span className="font-bold">{invoice.date}</span></div>
+                  <div className="flex justify-between text-sm"><span className="label-tiny">Currency</span> <span className="font-bold">{invoice.currency}</span></div>
+               </div>
+            </section>
 
-            {/* Items Table */}
-            <table className="invoice-table mb-8">
-              <thead>
-                <tr>
-                  {invoice.columns.filter(c => c.visible && c.print).map(col => (
-                    <th key={col.key} style={{width: col.width}}>{col.label}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {calculatedTotals.items.map((item, idx) => (
-                  <tr key={item.id}>
-                    {invoice.columns.filter(c => c.visible && c.print).map(col => (
-                      <td key={col.key} className={col.isPrivate ? 'private-col-print-hidden' : ''}>
-                        {col.key === 'sn' ? (idx + 1) :
-                         col.key === 'total' ? (item.grossAmount || 0).toFixed(2) :
-                         item[col.key]}
-                      </td>
-                    ))}
+            <table className="paper-table">
+               <thead>
+                  <tr>
+                     {invoice.columns.filter(c => c.visible).map(col => (
+                       <th key={col.key} className={col.isPrivate ? 'private-col' : ''} style={{width: col.width}}>{col.label}</th>
+                     ))}
                   </tr>
-                ))}
-              </tbody>
+               </thead>
+               <tbody>
+                  {totals.items.map((item, idx) => (
+                    <tr key={item.id}>
+                       {invoice.columns.filter(c => c.visible).map(col => (
+                         <td key={col.key} className={col.isPrivate ? 'private-col' : ''}>
+                           {col.key === 'sn' ? (idx + 1) :
+                            col.key === 'lineTotal' ? <span className="font-black">{(item.lineTotal || 0).toFixed(2)}</span> :
+                            <input className="r-input border-none p-0 bg-transparent font-medium" defaultValue={item[col.key]} onChange={e => updateItem(item.id, col.key, e.target.type === 'number' ? parseFloat(e.target.value) : e.target.value)} disabled={isLocked} />
+                           }
+                         </td>
+                       ))}
+                    </tr>
+                  ))}
+               </tbody>
             </table>
 
-            {/* Totals Summary */}
-            <div className="totals-summary">
-              <div className="totals-row"><span>Subtotal (Net)</span> <span>{calculatedTotals.subtotal.toFixed(2)}</span></div>
-              {calculatedTotals.totalLineDiscount !== 0 && <div className="totals-row"><span>Line Discounts</span> <span>-{calculatedTotals.totalLineDiscount.toFixed(2)}</span></div>}
-              {calculatedTotals.totalGlobalDiscount !== 0 && <div className="totals-row"><span>Global Discount</span> <span>-{calculatedTotals.totalGlobalDiscount.toFixed(2)}</span></div>}
-              {calculatedTotals.totalExtraCharges !== 0 && <div className="totals-row"><span>Extra Charges</span> <span>{calculatedTotals.totalExtraCharges.toFixed(2)}</span></div>}
-              {Object.entries(calculatedTotals.taxSummary).map(([rate, amount]) => (
-                <div key={rate} className="totals-row text-xs text-slate-500"><span>VAT @ {rate}%</span> <span>{amount.toFixed(2)}</span></div>
-              ))}
-              {calculatedTotals.tdsAmount !== 0 && <div className="totals-row" style={{color: '#dc2626'}}><span>TDS Deduction</span> <span>-{calculatedTotals.tdsAmount.toFixed(2)}</span></div>}
-              {calculatedTotals.roundingAdjustment !== 0 && <div className="totals-row text-xs text-slate-500 italic"><span>Rounding Adj.</span> <span>{calculatedTotals.roundingAdjustment.toFixed(2)}</span></div>}
-              <div className="totals-row grand-total">
-                <span>Total Due</span>
-                <span>{invoice.currency} {calculatedTotals.grandTotal.toLocaleString(undefined, { minimumFractionDigits: invoice.config.precision })}</span>
-              </div>
-              <p className="text-right text-xs text-slate-500 mt-2">{InvoiceLogic.numberToWords(calculatedTotals.grandTotal)}</p>
+            {!isLocked && <button className="btn-line no-print" onClick={() => setInvoice({...invoice, items: [...invoice.items, {id: Date.now(), name: "", qty: 1, unitPrice: 0, taxRate: 5}]})}>+ ADD ITEM</button>}
+
+            <div className="total-block">
+               <div className="total-row"><span>Subtotal</span> <span className="font-bold">{totals.subtotal.toFixed(2)}</span></div>
+               <div className="total-row"><span>Total Tax</span> <span className="font-bold">{totals.totalTax.toFixed(2)}</span></div>
+               {totals.tdsAmount > 0 && <div className="total-row text-red-600 font-bold"><span>TDS Deduction</span> <span>-{totals.tdsAmount.toFixed(2)}</span></div>}
+               {totals.roundingAdjustment !== 0 && <div className="total-row italic text-slate-400"><span>Rounding Adjustment</span> <span>{totals.roundingAdjustment.toFixed(2)}</span></div>}
+               
+               <div className="grand-row">
+                  <span className="tracking-tighter uppercase">Total Due</span>
+                  <span>{invoice.currency} {totals.grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+               </div>
+               <p style={{textAlign: 'right', fontSize: '10px', fontWeight: 900, color: '#94a3b8', marginTop: '12px', textTransform: 'uppercase'}}>{EnterpriseInvoiceEngine.toWords(totals.grandTotal)}</p>
             </div>
 
-            {/* Footer Notes, Terms, Signature */}
-            <div style={{marginTop: '4rem'}}>
-              <h3 className="input-label">Invoice Notes</h3>
-              <p style={{fontSize: '0.8rem', color: '#4b5563'}}>{invoice.invoiceNotes}</p>
-              <h3 className="input-label mt-4">Terms & Conditions</h3>
-              <p style={{fontSize: '0.8rem', color: '#4b5563'}}>{invoice.paymentTerms}</p>
-            </div>
+            <footer className="mt-24 border-t border-slate-100 pt-10 flex justify-between items-end">
+               <div className="w-64">
+                  <span className="label-tiny">Terms & Notes</span>
+                  <p style={{fontSize: '11px', color: '#64748b', lineHeight: '1.5', marginTop: '10px'}}>1. Please pay within 15 days of invoice date.<br/>2. All taxes are as per UAE VAT Law.</p>
+               </div>
+               <div className="w-56 text-center border-t border-slate-900 pt-3">
+                  <span className="text-[10px] font-black text-slate-900 uppercase">Authorized Signatory</span>
+               </div>
+            </footer>
 
-            <div className="flex justify-between items-end mt-20">
-              <div className="w-48 text-center border-t border-slate-200 pt-2">
-                <span className="text-xs text-slate-500">Customer Signature</span>
-              </div>
-              <div className="w-48 text-center border-t border-black pt-2">
-                <span className="text-xs font-bold">Authorized Signatory</span>
-              </div>
+            <div className="absolute bottom-10 left-[60px] right-[60px] flex justify-between text-[8px] font-black text-slate-200 tracking-[5px] uppercase">
+                <span>Ref: {invoice.invoiceNo}</span>
+                <span>Audit Stamp: {btoa(invoice.invoiceNo).substring(0, 10)}</span>
             </div>
-
           </div>
         </div>
+
       </div>
     </div>
   );
