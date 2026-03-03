@@ -1,23 +1,22 @@
-export const generateIntegrityHash = async (invoiceData) => {
-  const msgUint8 = new TextEncoder().encode(JSON.stringify(invoiceData));
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-};
+export const AuditEngine = {
+  generateIntegrityHash: async (data) => {
+    const encoder = new TextEncoder();
+    // Exclude volatile UI fields before hashing
+    const { history, auditLog, ...stableData } = data;
+    const dataStr = JSON.stringify(stableData);
+    const msgBuffer = encoder.encode(dataStr);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  },
 
-export const transitionStatus = async (currentInvoice, nextStatus) => {
-  const timestamp = new Date().toISOString();
-  const updated = { ...currentInvoice, status: nextStatus, updatedAt: timestamp };
-  
-  if (nextStatus === 'FINAL') {
-    updated.hash = await generateIntegrityHash(updated);
-    updated.locked = true;
+  createRevision: (invoice) => {
+    const version = (invoice.version || 1) + 1;
+    return {
+      ...invoice,
+      version,
+      status: 'DRAFT',
+      locked: false,
+      history: [...(invoice.history || []), { ...invoice, history: undefined }]
+    };
   }
-  
-  updated.auditLog = [
-    ...(currentInvoice.auditLog || []),
-    { action: `STATUS_CHANGE_${nextStatus}`, time: timestamp }
-  ];
-  
-  return updated;
 };

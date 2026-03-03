@@ -1,89 +1,115 @@
 import Decimal from 'decimal.js';
 
-// Internal precision: 20 decimal places
-Decimal.set({ precision: 20, rounding: Decimal.ROUND_HALF_EVEN });
+Decimal.set({ precision: 30, rounding: Decimal.ROUND_HALF_EVEN });
 
-export const calculateInvoice = (data, config) => {
-  const {
-    items = [],
-    globalDiscount = { value: 0, type: 'fixed' },
-    extraCharges = 0,
-    roundingMode = 'HALF_EVEN',
-    isTaxInclusive = false
-  } = data;
+export const FinancialPipeline = {
+  execute: (invoice, config) => {
+    const {
+      items = [],
+      globalDiscount = { value: 0, type: 'fixed', timing: 'pre-tax' },
+      extraCharges = 0,
+      partialPayments = [],
+      isTaxInclusive = false,
+      isReverseCharge = false,
+      withholdingTax = 0, // TDS
+      roundingConfig = { precision: 2, method: 'HALF_EVEN' }
+    } = invoice;
 
-  // 1. Base Amount & 2/3. Line Adjustments
-  let processedItems = items.map(item => {
-    const qty = new Decimal(item.qty || 0);
-    const rate = new Decimal(item.rate || 0);
-    let base = qty.mul(rate);
+    const roundMode = {
+      'HALF_EVEN': Decimal.ROUND_HALF_EVEN,
+      'UP': Decimal.ROUND_UP,
+      'DOWN': Decimal.ROUND_DOWN
+    }[roundingConfig.method] || Decimal.ROUND_HALF_EVEN;
 
-    // Line Charge
-    if (item.charge) {
-      base = item.chargeType === 'percent' 
-        ? base.add(base.mul(new Decimal(item.charge).div(100)))
-        : base.add(new Decimal(item.charge));
-    }
+    // 1-3. Base Amount, Line Charges, and Line Discounts
+    let processedItems = items.map(item => {
+      let qty = new Decimal(item.qty || 0);
+      let rate = new Decimal(item.rate || 0);
+      
+      // Step 1: Base Amount
+      let base = qty.mul(rate);
 
-    // Line Discount
-    if (item.discount) {
-      base = item.discountType === 'percent'
-        ? base.sub(base.mul(new Decimal(item.discount).div(100)))
-        : base.sub(new Decimal(item.discount));
-    }
+      // Step 2: Line Charges (Fixed or Percent)
+      if (item.chargeValue) {
+        let c = new Decimal(item.chargeValue);
+        base = item.chargeType === 'percent' ? base.add(base.mul(c.div(100))) : base.add(c);
+      }
 
-    return { ...item, lineBase: base };
-  });
+      // Step 3: Line Discounts
+      if (item.discountValue) {
+        let d = new Decimal(item.discountValue);
+        base = item.discountType === 'percent' ? base.sub(base.mul(d.div(100))) : base.sub(d);
+      }
 
-  const totalLineBase = processedItems.reduce((acc, item) => acc.add(item.lineBase), new Decimal(0));
+      return { ...item, step3_lineBase: base };
+    });
 
-  // 4. Pre-Tax Global Discount (Pro-rata distribution)
-  const gDisc = globalDiscount.type === 'percent' 
-    ? totalLineBase.mul(new Decimal(globalDiscount.value).div(100))
-    : new Decimal(globalDiscount.value);
+    const totalStep3 = processedItems.reduce((acc, i) => acc.add(i.step3_lineBase), new Decimal(0));
 
-  processedItems = processedItems.map(item => {
-    const share = totalLineBase.isZero() ? new Decimal(0) : item.lineBase.div(totalLineBase);
-    const itemDiscount = gDisc.mul(share);
-    return { ...item, taxableAmount: item.lineBase.sub(itemDiscount) };
-  });
+    // Step 4: Pre-Tax Global Discount (Pro-rata distribution)
+    const preTaxGlobalDisc = (globalDiscount.timing === 'pre-tax') 
+      ? (globalDiscount.type === 'percent' ? totalStep3.mul(new Decimal(globalDiscount.value).div(100)) : new Decimal(globalDiscount.value))
+      : new Decimal(0);
 
-  // 5/6. Multi-Tax Engine & Aggregation
-  let taxRegistry = {};
-  processedItems = processedItems.map(item => {
-    const taxRate = new Decimal(item.taxP || 0);
-    let taxAmount;
+    processedItems = processedItems.map(item => {
+      const share = totalStep3.isZero() ? new Decimal(0) : item.step3_lineBase.div(totalStep3);
+      const itemDiscountShare = preTaxGlobalDisc.mul(share);
+      return { ...item, step4_taxableBase: item.step3_lineBase.sub(itemDiscountShare) };
+    });
 
-    if (isTaxInclusive) {
-      // Amount = Total - (Total / (1 + rate))
-      const net = item.taxableAmount.div(taxRate.div(100).add(1));
-      taxAmount = item.taxableAmount.sub(net);
-      item.taxableAmount = net;
-    } else {
-      taxAmount = item.taxableAmount.mul(taxRate.div(100));
-    }
+    // Step 5-6: Multi-Tax Engine & Aggregation
+    let taxRegistry = {};
+    processedItems = processedItems.map(item => {
+      if (isReverseCharge) {
+        return { ...item, step6_taxAmount: new Decimal(0), step6_lineTotal: item.step4_taxableBase };
+      }
 
-    const rateKey = taxRate.toString();
-    taxRegistry[rateKey] = (taxRegistry[rateKey] || new Decimal(0)).add(taxAmount);
-    
-    return { ...item, lineTax: taxAmount, lineTotal: item.taxableAmount.add(taxAmount) };
-  });
+      const rate = new Decimal(item.taxP || 0);
+      let taxAmt, netAmt;
 
-  // 7-12. Totals and Rounding
-  const subtotal = processedItems.reduce((acc, i) => acc.add(i.taxableAmount), new Decimal(0));
-  const totalTax = Object.values(taxRegistry).reduce((acc, v) => acc.add(v), new Decimal(0));
-  
-  let grandTotal = subtotal.add(totalTax).add(new Decimal(extraCharges));
-  
-  // Final Rounding
-  const finalTotal = grandTotal.toDecimalPlaces(2, Decimal[`ROUND_${roundingMode}`]);
+      if (isTaxInclusive) {
+        netAmt = item.step4_taxableBase.div(rate.div(100).add(1));
+        taxAmt = item.step4_taxableBase.sub(netAmt);
+      } else {
+        netAmt = item.step4_taxableBase;
+        taxAmt = netAmt.mul(rate.div(100));
+      }
 
-  return {
-    items: processedItems,
-    taxSummary: taxRegistry,
-    subtotal: subtotal.toNumber(),
-    totalTax: totalTax.toNumber(),
-    grandTotal: finalTotal.toNumber(),
-    roundingDiff: finalTotal.sub(grandTotal).toNumber()
-  };
+      const rKey = rate.toString();
+      taxRegistry[rKey] = (taxRegistry[rKey] || new Decimal(0)).add(taxAmt);
+
+      return { ...item, step6_net: netAmt, step6_tax: taxAmt, step6_lineTotal: netAmt.add(taxAmt) };
+    });
+
+    // Step 7: TDS / Withholding deduction
+    const subtotal = processedItems.reduce((acc, i) => acc.add(i.step6_net || i.step4_taxableBase), new Decimal(0));
+    const totalTax = processedItems.reduce((acc, i) => acc.add(i.step6_tax || 0), new Decimal(0));
+    const tdsAmount = subtotal.mul(new Decimal(withholdingTax).div(100));
+
+    // Step 8-9: Extra Charges & Post-Tax Global Discount
+    const charges = new Decimal(extraCharges);
+    const postTaxGlobalDisc = (globalDiscount.timing === 'post-tax')
+      ? (globalDiscount.type === 'percent' ? subtotal.add(totalTax).mul(new Decimal(globalDiscount.value).div(100)) : new Decimal(globalDiscount.value))
+      : new Decimal(0);
+
+    // Step 10: Partial Payments
+    const paidSum = partialPayments.reduce((acc, p) => acc.add(new Decimal(p.amount || 0)), new Decimal(0));
+
+    // Step 11: Final Rounding Engine
+    const rawTotal = subtotal.add(totalTax).add(charges).sub(tdsAmount).sub(postTaxGlobalDisc);
+    const grandTotal = rawTotal.toDecimalPlaces(roundingConfig.precision, roundMode);
+    const balanceDue = grandTotal.sub(paidSum);
+
+    return {
+      items: processedItems,
+      taxSummary: Object.entries(taxRegistry).map(([rate, amt]) => ({ rate, amount: amt.toNumber() })),
+      subtotal: subtotal.toNumber(),
+      totalTax: totalTax.toNumber(),
+      tdsAmount: tdsAmount.toNumber(),
+      grandTotal: grandTotal.toNumber(),
+      paidAmount: paidSum.toNumber(),
+      balanceDue: balanceDue.toNumber(),
+      roundingDiff: grandTotal.sub(rawTotal).toNumber()
+    };
+  }
 };

@@ -1,377 +1,314 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import Decimal from 'decimal.js';
+import { FinancialPipeline } from '../../engine-data/logic';
+import { AuditEngine } from '../../engine-data/audit-engine';
+import { 
+  Plus, Trash2, Lock, Unlock, Printer, 
+  RotateCcw, History, CheckCircle, Shield 
+} from 'lucide-react';
 
-// --- ENTERPRISE UTILITIES ---
-const generateHash = async (data) => {
-  const encoder = new TextEncoder();
-  const cleanData = JSON.stringify({ ...data, hash: undefined, status: 'FINAL' });
-  const msgBuffer = encoder.encode(cleanData);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-};
-
-const formatCurrency = (val, symbol = 'AED') => {
-  return symbol + ' ' + new Decimal(val).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
-};
-
-export default function EnterpriseInvoiceGenerator() {
-  // --- 1. STATE MANAGEMENT ---
+export default function EnterpriseInvoice() {
   const [invoice, setInvoice] = useState({
     status: 'DRAFT',
-    number: 'INV-' + new Date().getFullYear() + '-001',
+    number: 'TAX-2024-001',
+    version: 1,
     issueDate: new Date().toISOString().split('T')[0],
-    dueDate: '',
     currency: 'AED',
     isTaxInclusive: false,
-    businessInfo: { name: 'Your Company LLC', trn: '100XXXXXXXXX003', address: 'Dubai, UAE' },
-    clientInfo: { name: '', trn: '', address: '' },
-    items: [{ id: Date.now(), name: '', qty: 1, rate: 0, taxP: 5, discount: 0 }],
-    globalDiscount: 0,
-    extraCharges: 0,
-    notes: 'Thank you for your business.',
-    hash: null,
-    locked: false
+    items: [{ id: '1', name: '', qty: 1, rate: 0, taxP: 5 }],
+    columns: [
+      { key: 'name', label: 'Item Name', visible: true },
+      { key: 'hsn', label: 'HSN/SAC', visible: true },
+      { key: 'qty', label: 'Qty', visible: true },
+      { key: 'rate', label: 'Rate', visible: true },
+      { key: 'taxP', label: 'VAT %', visible: true },
+      { key: 'total', label: 'Line Total', visible: true },
+    ],
+    auditLog: [],
+    history: []
   });
 
-  // --- 2. DETERMINISTIC 12-STEP CALCULATION ENGINE ---
-  const totals = useMemo(() => {
-    const items = invoice.items;
-    const isInclusive = invoice.isTaxInclusive;
-    
-    // Step 1-3: Line Base & Initial Adjustments
-    let processed = items.map(item => {
-      const q = new Decimal(item.qty || 0);
-      const r = new Decimal(item.rate || 0);
-      const lineBase = q.mul(r).sub(item.discount || 0);
-      return { ...item, lineBase };
-    });
+  const totals = useMemo(() => FinancialPipeline.execute(invoice), [invoice]);
 
-    const totalLineBase = processed.reduce((acc, i) => acc.add(i.lineBase), new Decimal(0));
-
-    // Step 4: Pro-rata Global Discount Distribution
-    const gDisc = new Decimal(invoice.globalDiscount || 0);
-    processed = processed.map(item => {
-      const share = totalLineBase.isZero() ? new Decimal(0) : item.lineBase.div(totalLineBase);
-      return { ...item, taxableBase: item.lineBase.sub(gDisc.mul(share)) };
-    });
-
-    // Step 5-9: Multi-Tax Engine & Grouping
-    let taxGroups = {};
-    processed = processed.map(item => {
-      const rate = new Decimal(item.taxP || 0);
-      let tax, net;
-      if (isInclusive) {
-        net = item.taxableBase.div(rate.div(100).add(1));
-        tax = item.taxableBase.sub(net);
-      } else {
-        net = item.taxableBase;
-        tax = net.mul(rate.div(100));
-      }
-      const rKey = rate.toString();
-      taxGroups[rKey] = (taxGroups[rKey] || new Decimal(0)).add(tax);
-      return { ...item, net, tax, total: net.add(tax) };
-    });
-
-    // Step 10-12: Final Totals & Banker's Rounding
-    const subtotal = processed.reduce((acc, i) => acc.add(i.net), new Decimal(0));
-    const totalTax = processed.reduce((acc, i) => acc.add(i.tax), new Decimal(0));
-    const grandTotalRaw = subtotal.add(totalTax).add(invoice.extraCharges || 0);
-    const grandTotal = grandTotalRaw.toDecimalPlaces(2, Decimal.ROUND_HALF_EVEN);
-
-    return { items: processed, taxGroups, subtotal, totalTax, grandTotal };
-  }, [invoice]);
-
-  // --- 3. ACTIONS ---
-  const handleLock = async () => {
-    if (invoice.locked) {
-      setInvoice(prev => ({ ...prev, locked: false, status: 'DRAFT', hash: null }));
-    } else {
-      const hash = await generateHash(invoice);
-      setInvoice(prev => ({ ...prev, locked: true, status: 'FINAL', hash }));
-    }
-  };
-
-  const updateItem = (id, field, val) => {
-    if (invoice.locked) return;
-    setInvoice(prev => ({
-      ...prev,
-      items: prev.items.map(i => i.id === id ? { ...i, [field]: val } : i)
+  const toggleLock = async () => {
+    if (invoice.status === 'FINAL') return;
+    const hash = await AuditEngine.generateIntegrityHash(invoice);
+    setInvoice(prev => ({ 
+      ...prev, 
+      status: 'FINAL', 
+      locked: true, 
+      integrityHash: hash,
+      finalizedAt: new Date().toISOString()
     }));
   };
 
-  return (
-    <div id="invoice-engine-container">
-      {/* CSS ISOLATION LAYER */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        #invoice-engine-container {
-          --primary: #2563eb;
-          --bg: #f1f5f9;
-          --border: #e2e8f0;
-          --text-main: #0f172a;
-          --text-muted: #64748b;
-          font-family: 'Inter', system-ui, sans-serif;
-          background: var(--bg);
-          min-height: 100vh;
-          display: flex;
-          flex-direction: column;
-        }
-        .top-nav {
-          background: white;
-          padding: 1rem 2rem;
-          border-bottom: 1px solid var(--border);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          position: sticky;
-          top: 0;
-          z-index: 100;
-        }
-        .main-layout {
-          display: grid;
-          grid-template-columns: 1fr 450px;
-          flex: 1;
-          height: calc(100vh - 70px);
-        }
-        .editor-side {
-          padding: 2rem;
-          overflow-y: auto;
-          background: var(--bg);
-        }
-        .preview-side {
-          background: #334155;
-          padding: 2rem;
-          overflow-y: auto;
-          display: flex;
-          justify-content: center;
-        }
-        .card {
-          background: white;
-          border-radius: 12px;
-          border: 1px solid var(--border);
-          padding: 1.5rem;
-          margin-bottom: 1.5rem;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .section-label {
-          font-size: 0.7rem;
-          font-weight: 800;
-          color: var(--text-muted);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          margin-bottom: 1rem;
-          display: block;
-        }
-        .input-group { margin-bottom: 1rem; }
-        .input-group label { display: block; font-size: 0.8rem; margin-bottom: 0.3rem; font-weight: 600; }
-        input, select, textarea {
-          width: 100%;
-          padding: 0.6rem;
-          border: 1px solid var(--border);
-          border-radius: 6px;
-          font-size: 0.9rem;
-          box-sizing: border-box;
-        }
-        .btn {
-          padding: 0.6rem 1.2rem;
-          border-radius: 6px;
-          font-weight: 700;
-          font-size: 0.8rem;
-          cursor: pointer;
-          border: none;
-          transition: all 0.2s;
-        }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-outline { background: white; border: 1px solid var(--border); color: var(--text-main); }
-        
-        /* A4 PAPER STYLING */
-        .a4-paper {
-          width: 210mm;
-          min-height: 297mm;
-          background: white;
-          padding: 20mm;
-          box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-          box-sizing: border-box;
-          color: #000;
-          position: relative;
-        }
-        .paper-header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 2rem; }
-        .line-table { width: 100%; border-collapse: collapse; margin-top: 2rem; }
-        .line-table th { border-bottom: 2px solid #000; text-align: left; padding: 0.8rem 0.5rem; font-size: 0.75rem; text-transform: uppercase; }
-        .line-table td { padding: 1rem 0.5rem; border-bottom: 1px solid #eee; font-size: 0.85rem; }
-        .totals-box { margin-left: auto; width: 250px; margin-top: 2rem; }
-        .total-row { display: flex; justify-content: space-between; padding: 0.4rem 0; font-size: 0.85rem; }
-        .grand-total { border-top: 2px solid #000; margin-top: 0.5rem; padding-top: 0.5rem; font-weight: 900; font-size: 1.1rem; }
-        
-        .hash-box { margin-top: 5rem; font-family: monospace; font-size: 8px; color: #94a3b8; word-break: break-all; }
-        @media print {
-          .top-nav, .editor-side { display: none !important; }
-          .main-layout { display: block; height: auto; }
-          .preview-side { padding: 0; background: white; }
-          .a4-paper { box-shadow: none; width: 100%; margin: 0; }
-        }
-      `}} />
+  const createRevision = () => {
+    const revised = AuditEngine.createRevision(invoice);
+    setInvoice(revised);
+  };
 
-      {/* TOP NAVIGATION */}
-      <nav className="top-nav">
-        <div style={{display:'flex', alignItems:'center', gap: '1rem'}}>
-          <div style={{background: 'var(--primary)', color: 'white', padding: '0.5rem', borderRadius: '8px', fontWeight: 900}}>EC</div>
+  return (
+    <div id="invoice-root" className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      {/* Styles scoped specifically to #invoice-root */}
+      <style jsx global>{`
+        #invoice-root { --primary: #2563eb; }
+        #invoice-root input:disabled { background: #f8fafc; cursor: not-allowed; border-color: #e2e8f0; }
+        @media print {
+          #invoice-root .no-print { display: none !important; }
+          #invoice-root .print-only { display: block !important; }
+          #invoice-root { background: white; padding: 0; }
+        }
+      `}</style>
+
+      {/* ACTION BAR */}
+      <nav className="no-print sticky top-0 z-50 flex items-center justify-between border-b bg-white/90 px-8 py-4 backdrop-blur-md">
+        <div className="flex items-center gap-4">
+          <div className="rounded-lg bg-blue-600 p-2 text-white"><Shield size={20}/></div>
           <div>
-            <div style={{fontWeight: 900, fontSize: '0.9rem'}}>FIN-CORE ENGINE v3.0</div>
-            <div style={{fontSize: '0.6rem', color: 'var(--text-muted)'}}>{invoice.status} | {invoice.locked ? 'IMMUTABLE' : 'READ_WRITE'}</div>
+            <h1 className="text-sm font-black uppercase tracking-tighter">Enterprise Invoice Engine</h1>
+            <p className="text-[10px] text-slate-400 font-mono">{invoice.integrityHash || 'UNSECURED_DRAFT'}</p>
           </div>
         </div>
-        <div style={{display:'flex', gap: '0.5rem'}}>
-          <button className="btn btn-outline" onClick={() => window.print()}>PRINT PDF</button>
-          <button className={`btn ${invoice.locked ? 'btn-outline' : 'btn-primary'}`} onClick={handleLock}>
-            {invoice.locked ? '🔓 UNLOCK' : '🔒 FINALIZE & LOCK'}
+        <div className="flex gap-2">
+          {invoice.status === 'FINAL' ? (
+            <button onClick={createRevision} className="flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-xs font-bold text-white hover:bg-amber-600">
+              <RotateCcw size={14}/> Create Revision (v{invoice.version + 1})
+            </button>
+          ) : (
+            <button onClick={toggleLock} className="flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800">
+              <Lock size={14}/> Finalize & Lock
+            </button>
+          )}
+          <button onClick={() => window.print()} className="flex items-center gap-2 rounded-md border bg-white px-4 py-2 text-xs font-bold hover:bg-slate-50">
+            <Printer size={14}/> Print A4
           </button>
         </div>
       </nav>
 
-      <div className="main-layout">
-        {/* LEFT: EDITOR */}
-        <div className="editor-side">
-          <div className="card">
-            <span className="section-label">Document Metadata</span>
-            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'1rem'}}>
-              <div className="input-group">
-                <label>Invoice #</label>
-                <input value={invoice.number} disabled={invoice.locked} onChange={e => setInvoice({...invoice, number: e.target.value})} />
-              </div>
-              <div className="input-group">
-                <label>Issue Date</label>
-                <input type="date" value={invoice.issueDate} disabled={invoice.locked} onChange={e => setInvoice({...invoice, issueDate: e.target.value})} />
-              </div>
-              <div className="input-group">
-                <label>Currency</label>
-                <select value={invoice.currency} disabled={invoice.locked} onChange={e => setInvoice({...invoice, currency: e.target.value})}>
-                  <option value="AED">AED</option>
-                  <option value="USD">USD</option>
+      <main className="grid grid-cols-1 lg:grid-cols-2">
+        {/* EDITOR PANEL */}
+        <section className="no-print h-[calc(100vh-70px)] overflow-y-auto border-r p-8">
+          <div className="mx-auto max-w-2xl space-y-8">
+            {/* COMPLIANCE HEADER */}
+            <div className="grid grid-cols-2 gap-6 rounded-xl border border-blue-100 bg-blue-50/30 p-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-slate-400">Invoice Title</label>
+                <select 
+                  disabled={invoice.locked}
+                  className="w-full rounded-lg border-slate-200 bg-white p-2 text-sm font-bold focus:ring-2 focus:ring-blue-500"
+                  value={invoice.title}
+                  onChange={e => setInvoice({...invoice, title: e.target.value})}
+                >
+                  <option>TAX INVOICE</option>
+                  <option>CREDIT NOTE</option>
+                  <option>PROFORMA INVOICE</option>
                 </select>
               </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-slate-400">Invoice Number</label>
+                <input 
+                  disabled={invoice.locked}
+                  className="w-full rounded-lg border-slate-200 p-2 text-sm font-bold"
+                  value={invoice.number}
+                  onChange={e => setInvoice({...invoice, number: e.target.value})}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="card">
-            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: '1rem'}}>
-              <span className="section-label" style={{margin:0}}>Transaction Items</span>
-              <button className="btn btn-outline" style={{padding:'0.3rem 0.6rem'}} onClick={() => setInvoice({...invoice, items: [...invoice.items, {id: Date.now(), name:'', qty:1, rate:0, taxP:5, discount:0}]})} disabled={invoice.locked}>+ ADD LINE</button>
-            </div>
-            <table style={{width:'100%', borderCollapse:'collapse'}}>
-              <thead>
-                <tr style={{fontSize:'0.7rem', color:'var(--text-muted)', textAlign:'left'}}>
-                  <th>Description</th>
-                  <th width="80">Qty</th>
-                  <th width="120">Rate</th>
-                  <th width="80">VAT %</th>
-                  <th width="50"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoice.items.map(item => (
-                  <tr key={item.id}>
-                    <td><input value={item.name} placeholder="Item description" disabled={invoice.locked} onChange={e => updateItem(item.id, 'name', e.target.value)} /></td>
-                    <td><input type="number" value={item.qty} disabled={invoice.locked} onChange={e => updateItem(item.id, 'qty', e.target.value)} /></td>
-                    <td><input type="number" value={item.rate} disabled={invoice.locked} onChange={e => updateItem(item.id, 'rate', e.target.value)} /></td>
-                    <td><input type="number" value={item.taxP} disabled={invoice.locked} onChange={e => updateItem(item.id, 'taxP', e.target.value)} /></td>
-                    <td><button onClick={() => setInvoice({...invoice, items: invoice.items.filter(i => i.id !== item.id)})} disabled={invoice.locked || invoice.items.length === 1}>×</button></td>
-                  </tr>
+            {/* DYNAMIC COLUMN EDITOR */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Transaction Lines</h3>
+                <button 
+                  disabled={invoice.locked}
+                  onClick={() => setInvoice({...invoice, items: [...invoice.items, {id: Date.now().toString(), name: '', qty: 1, rate: 0, taxP: 5}]})}
+                  className="text-[10px] font-black text-blue-600 hover:underline"
+                >
+                  + ADD POSITION
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {invoice.items.map((item, idx) => (
+                  <div key={item.id} className="group relative rounded-xl border bg-white p-4 transition-all hover:border-blue-300 shadow-sm">
+                    <div className="grid grid-cols-12 gap-4">
+                      <div className="col-span-6 space-y-1">
+                        <input 
+                          disabled={invoice.locked}
+                          placeholder="Item Description" 
+                          className="w-full border-none p-0 text-sm font-bold focus:ring-0"
+                          value={item.name}
+                          onChange={e => {
+                            const newItems = [...invoice.items];
+                            newItems[idx].name = e.target.value;
+                            setInvoice({...invoice, items: newItems});
+                          }}
+                        />
+                        <input 
+                          disabled={invoice.locked}
+                          placeholder="HSN/SAC" 
+                          className="w-full border-none p-0 text-[10px] text-slate-400 focus:ring-0 uppercase"
+                          value={item.hsn}
+                          onChange={e => {
+                            const newItems = [...invoice.items];
+                            newItems[idx].hsn = e.target.value;
+                            setInvoice({...invoice, items: newItems});
+                          }}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-[9px] font-bold text-slate-400">Qty</label>
+                        <input 
+                          disabled={invoice.locked}
+                          type="number" 
+                          className="w-full border-none p-0 text-sm focus:ring-0"
+                          value={item.qty}
+                          onChange={e => {
+                            const newItems = [...invoice.items];
+                            newItems[idx].qty = e.target.value;
+                            setInvoice({...invoice, items: newItems});
+                          }}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-[9px] font-bold text-slate-400">Rate</label>
+                        <input 
+                          disabled={invoice.locked}
+                          type="number" 
+                          className="w-full border-none p-0 text-sm focus:ring-0"
+                          value={item.rate}
+                          onChange={e => {
+                            const newItems = [...invoice.items];
+                            newItems[idx].rate = e.target.value;
+                            setInvoice({...invoice, items: newItems});
+                          }}
+                        />
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <label className="text-[9px] font-bold text-slate-400">VAT %</label>
+                        <input 
+                          disabled={invoice.locked}
+                          type="number" 
+                          className="w-full border-none p-0 text-right text-sm focus:ring-0 font-bold"
+                          value={item.taxP}
+                          onChange={e => {
+                            const newItems = [...invoice.items];
+                            newItems[idx].taxP = e.target.value;
+                            setInvoice({...invoice, items: newItems});
+                          }}
+                        />
+                      </div>
+                    </div>
+                    {!invoice.locked && (
+                      <button 
+                        onClick={() => setInvoice({...invoice, items: invoice.items.filter(i => i.id !== item.id)})}
+                        className="absolute -right-2 -top-2 rounded-full bg-red-100 p-1 text-red-600 opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 size={12}/>
+                      </button>
+                    )}
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1.5rem'}}>
-            <div className="card">
-              <span className="section-label">Global Adjustments</span>
-              <div className="input-group">
-                <label>Global Discount (Fixed)</label>
-                <input type="number" value={invoice.globalDiscount} disabled={invoice.locked} onChange={e => setInvoice({...invoice, globalDiscount: e.target.value})} />
-              </div>
-              <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                <input type="checkbox" style={{width:'auto'}} checked={invoice.isTaxInclusive} onChange={e => setInvoice({...invoice, isTaxInclusive: e.target.checked})} disabled={invoice.locked} />
-                <label style={{fontSize:'0.8rem'}}>Tax Inclusive Pricing</label>
               </div>
             </div>
-            <div className="card">
-              <span className="section-label">Compliance Notes</span>
-              <textarea style={{height:'85px'}} value={invoice.notes} disabled={invoice.locked} onChange={e => setInvoice({...invoice, notes: e.target.value})} />
-            </div>
           </div>
-        </div>
+        </section>
 
-        {/* RIGHT: A4 PREVIEW */}
-        <div className="preview-side">
-          <div className="a4-paper">
-            <div className="paper-header">
+        {/* A4 PREVIEW ENGINE */}
+        <section className="bg-slate-200 p-12 overflow-y-auto print:bg-white print:p-0">
+          <div className="mx-auto box-border min-h-[297mm] w-[210mm] bg-white p-[20mm] shadow-2xl print:m-0 print:shadow-none">
+            {/* WATERMARK FOR CANCELLED */}
+            {invoice.status === 'CANCELLED' && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.08] rotate-45">
+                <h1 className="text-[120px] font-black border-8 border-red-600 p-10 text-red-600">CANCELLED</h1>
+              </div>
+            )}
+
+            <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8">
               <div>
-                <div style={{fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em'}}>TAX INVOICE</div>
-                <div style={{marginTop: '1rem', fontSize: '0.8rem'}}>
-                  <strong>{invoice.businessInfo.name}</strong><br/>
-                  TRN: {invoice.businessInfo.trn}<br/>
-                  {invoice.businessInfo.address}
+                <h2 className="text-4xl font-black tracking-tighter">{invoice.title || 'TAX INVOICE'}</h2>
+                <div className="mt-6 space-y-1 text-sm">
+                  <p className="font-black">Seller TRN: <span className="font-normal text-slate-600">100349200000003</span></p>
+                  <p className="font-black">Address: <span className="font-normal text-slate-600">Business Bay, Dubai, UAE</span></p>
                 </div>
               </div>
-              <div style={{textAlign: 'right'}}>
-                <div style={{height: '60px', width: '120px', background: '#eee', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', color: '#aaa'}}>LOGO</div>
-                <div style={{fontSize: '0.8rem'}}>
-                  <strong>Invoice: {invoice.number}</strong><br/>
-                  Date: {invoice.issueDate}
+              <div className="text-right">
+                <div className="h-16 w-32 bg-slate-900 text-white flex items-center justify-center font-bold italic">LOGO</div>
+                <div className="mt-6 text-sm">
+                  <p className="font-black">Invoice #: <span className="font-normal">{invoice.number}</span></p>
+                  <p className="font-black">Date: <span className="font-normal">{invoice.issueDate}</span></p>
+                  <p className="font-black text-blue-600">Version: {invoice.version}.0</p>
                 </div>
               </div>
             </div>
 
-            <table className="line-table">
-              <thead>
-                <tr>
-                  <th>Description</th>
-                  <th style={{textAlign:'right'}}>Qty</th>
-                  <th style={{textAlign:'right'}}>Rate</th>
-                  <th style={{textAlign:'right'}}>VAT</th>
-                  <th style={{textAlign:'right'}}>Amount ({invoice.currency})</th>
+            <table className="mt-12 w-full text-left">
+              <thead className="border-b-2 border-slate-900 bg-slate-50">
+                <tr className="text-[10px] font-black uppercase tracking-widest">
+                  <th className="py-4 pl-4">Description</th>
+                  <th className="py-4 text-right">Qty</th>
+                  <th className="py-4 text-right">Rate</th>
+                  <th className="py-4 text-right">VAT</th>
+                  <th className="py-4 text-right pr-4">Amount ({invoice.currency})</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {totals.items.map((item, idx) => (
-                  <tr key={idx}>
-                    <td style={{fontWeight: 700}}>{item.name || 'Service Item'}</td>
-                    <td style={{textAlign:'right'}}>{item.qty}</td>
-                    <td style={{textAlign:'right'}}>{new Decimal(item.rate).toFixed(2)}</td>
-                    <td style={{textAlign:'right'}}>{item.tax.toFixed(2)}</td>
-                    <td style={{textAlign:'right', fontWeight: 700}}>{item.total.toFixed(2)}</td>
+                  <tr key={idx} className="text-xs">
+                    <td className="py-5 pl-4">
+                      <p className="font-bold">{item.name || 'Untitled Line Item'}</p>
+                      <p className="text-[9px] text-slate-400 uppercase mt-1">HSN: {item.hsn || '---'}</p>
+                    </td>
+                    <td className="py-5 text-right font-medium">{item.qty}</td>
+                    <td className="py-5 text-right font-medium">{item.rate.toFixed(2)}</td>
+                    <td className="py-5 text-right font-medium text-slate-400">{item.step6_tax?.toFixed(2) || '0.00'}</td>
+                    <td className="py-5 text-right font-black pr-4">{item.step6_lineTotal?.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
-            <div className="totals-box">
-              <div className="total-row">
-                <span>Subtotal (Net)</span>
-                <span>{totals.subtotal.toFixed(2)}</span>
-              </div>
-              <div className="total-row">
-                <span>Total VAT</span>
-                <span>{totals.totalTax.toFixed(2)}</span>
-              </div>
-              <div className="total-row grand-total">
-                <span>TOTAL DUE</span>
-                <span>{formatCurrency(totals.grandTotal, invoice.currency)}</span>
+            <div className="mt-12 flex justify-end">
+              <div className="w-72 space-y-3">
+                <div className="flex justify-between text-xs">
+                  <span className="font-black uppercase text-slate-400 tracking-widest">Net Subtotal</span>
+                  <span className="font-bold">{totals.subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="font-black uppercase text-slate-400 tracking-widest">Total VAT</span>
+                  <span className="font-bold">{totals.totalTax.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between border-t-2 border-slate-900 pt-4">
+                  <span className="text-sm font-black uppercase tracking-tighter">Grand Total</span>
+                  <span className="text-xl font-black text-blue-600">{invoice.currency} {totals.grandTotal.toFixed(2)}</span>
+                </div>
               </div>
             </div>
 
-            <div style={{marginTop: '4rem'}}>
-              <div className="section-label">Notes & Terms</div>
-              <p style={{fontSize: '0.75rem', lineHeight: 1.5}}>{invoice.notes}</p>
-            </div>
-
-            <div className="hash-box">
-              DOCUMENT_INTEGRITY_HASH: {invoice.hash || 'PRE_STAMP_DRAFT'}
-              <br/>
-              COMPLIANCE: FTA VAT EXECUTIVE DECREE NO. 8 OF 2017
+            {/* TAX SUMMARY BLOCK (UAE COMPLIANT) */}
+            <div className="mt-20 grid grid-cols-2 gap-12 border-t pt-10">
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Tax Aggregation Summary</h4>
+                <div className="space-y-1">
+                  {totals.taxSummary.map(tax => (
+                    <div key={tax.rate} className="flex justify-between text-[10px] border-b border-slate-50 pb-1">
+                      <span className="text-slate-500 italic">Standard Rate {tax.rate}%</span>
+                      <span className="font-bold">{tax.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <div className="h-24 w-24 border p-1 bg-slate-50">
+                  <div className="h-full w-full bg-slate-200 flex items-center justify-center text-[8px] text-slate-400 font-bold">QR CODE</div>
+                </div>
+                <p className="text-[8px] font-mono text-slate-400 max-w-[150px] text-right break-all">
+                  SHA-256: {invoice.integrityHash || 'DRAFT_STAMP_PENDING'}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }
