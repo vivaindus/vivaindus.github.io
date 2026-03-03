@@ -6,28 +6,8 @@ import {
 } from 'lucide-react';
 import QRCode from 'qrcode.react';
 
-const DEFAULT_COLUMNS = [
-  { id: 'sn', label: 'S.N.', visible: true, isPrivate: false },
-  { id: 'itemName', label: 'Item Name', visible: true, isPrivate: false },
-  { id: 'hsn', label: 'HSN/SAC', visible: true, isPrivate: false },
-  { id: 'sku', label: 'SKU', visible: true, isPrivate: false },
-  { id: 'qty', label: 'Qty', visible: true, isPrivate: false },
-  { id: 'unit', label: 'Unit', visible: true, isPrivate: false },
-  { id: 'rate', label: 'Rate', visible: true, isPrivate: false },
-  { id: 'discount', label: 'Discount', visible: true, isPrivate: false },
-  { id: 'taxPercent', label: 'Tax %', visible: true, isPrivate: false },
-  { id: 'taxAmount', label: 'Tax Amount', visible: true, isPrivate: true },
-  { id: 'lineTotal', label: 'Line Total', visible: true, isPrivate: false }
-];
-const DynamicColumnEngine = [
-  { id: 'name', label: 'Item Description', width: 'flex-1' },
-  { id: 'hsn', label: 'HSN/SAC', width: 'w-24' },
-  { id: 'qty', label: 'Qty', width: 'w-20' },
-  { id: 'rate', label: 'Rate', width: 'w-28' },
-  { id: 'taxP', label: 'VAT %', width: 'w-20' },
-  { id: 'total', label: 'Line Total', width: 'w-32' },
-];
-// debugging wrapper – keeps track of what values are passed as element types
+// debugging helper (optional – keep it if you want, but don’t execute a return at
+// module scope)
 function safeCreate(type, props, ...children) {
   if (typeof type === 'string' && type === 'text') {
     console.trace('rendering bad type', type);
@@ -37,15 +17,7 @@ function safeCreate(type, props, ...children) {
 const Dev = React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED
              ?.ReactCurrentDispatcher; // not really needed
 
-// later, in the JSX return:
-return (
-  <React.Fragment>
-    { /* wrap the entire invoice engine in a provider that overrides createElement */ }
-    <React.StrictMode>
-      { /* ...rest of your existing JSX… */ }
-    </React.StrictMode>
-  </React.Fragment>
-);
+
 export default function EnterpriseInvoice() {
   const [invoice, setInvoice] = useState({
     version: 1,
