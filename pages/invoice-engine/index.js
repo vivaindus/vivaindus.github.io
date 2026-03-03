@@ -27,7 +27,25 @@ const DynamicColumnEngine = [
   { id: 'taxP', label: 'VAT %', width: 'w-20' },
   { id: 'total', label: 'Line Total', width: 'w-32' },
 ];
+// debugging wrapper – keeps track of what values are passed as element types
+function safeCreate(type, props, ...children) {
+  if (typeof type === 'string' && type === 'text') {
+    console.trace('rendering bad type', type);
+  }
+  return React.createElement(type, props, ...children);
+}
+const Dev = React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED
+             ?.ReactCurrentDispatcher; // not really needed
 
+// later, in the JSX return:
+return (
+  <React.Fragment>
+    { /* wrap the entire invoice engine in a provider that overrides createElement */ }
+    <React.StrictMode>
+      { /* ...rest of your existing JSX… */ }
+    </React.StrictMode>
+  </React.Fragment>
+);
 export default function EnterpriseInvoice() {
   const [invoice, setInvoice] = useState({
     version: 1,
