@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
+import RelatedTools from '../../components/RelatedTools';
 
 const PRESETS = [
   { key: 'uae-visa', label: 'UAE Visa Photo', width: 600, height: 600, desc: 'Square digital photo, commonly used for UAE visa-style online uploads.' },
@@ -429,7 +430,10 @@ export default function PassportPhotoMaker() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/passportphoto" />
+
+<section style={contentSection}>
           <h2>Free passport photo maker for visa, ID and document photos</h2>
           <p>
             This Passport Photo Maker helps you create passport-size photos, visa photos and ID-style photos from a regular image.

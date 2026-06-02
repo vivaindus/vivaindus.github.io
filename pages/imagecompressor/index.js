@@ -390,7 +390,10 @@ export default function ImageCompressor() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/imagecompressor" />
+
+<section style={contentSection}>
           <h2 style={contentTitle}>What does image compression do?</h2>
           <p style={para}>
             Image compression reduces file size so images load faster and are easier to upload, email, store, and publish.

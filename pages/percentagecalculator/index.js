@@ -416,7 +416,10 @@ export default function PercentageCalculator() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/percentagecalculator" />
+
+<section style={contentSection}>
           <h2>Complete percentage calculator for every common percentage question</h2>
           <p>
             This all-in-one percentage calculator is designed for the exact questions people search every day, such as

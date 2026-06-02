@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
+import RelatedTools from '../../components/RelatedTools';
 
 const SIGNATURE_FONTS = [
   { label: 'Elegant Script', value: '"Brush Script MT", "Segoe Script", cursive' },
@@ -401,7 +402,10 @@ export default function SignatureMaker() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/signaturemaker" />
+
+<section style={contentSection}>
           <h2>Free signature maker for digital documents</h2>
           <p>
             This Signature Maker helps you create a digital signature for invoices, PDF forms, business letters, proposals,

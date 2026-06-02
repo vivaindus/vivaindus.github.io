@@ -550,7 +550,10 @@ export default function TaskList() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/tasklist" />
+
+<section style={contentSection}>
           <h2>Private task list, to-do list and daily planner</h2>
           <p>
             This task list app is designed for people searching for a simple to-do list, private task manager, daily planner,

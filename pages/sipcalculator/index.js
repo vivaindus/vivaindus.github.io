@@ -394,7 +394,10 @@ export default function SIPCalculator() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/sipcalculator" />
+
+<section style={contentSection}>
           <h2>Complete SIP calculator for monthly investment, step-up SIP, lumpsum and goal planning</h2>
           <p>
             This SIP calculator helps estimate future value from systematic investment plans, monthly investing, step-up SIP,

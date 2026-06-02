@@ -468,7 +468,10 @@ export default function ImageToPDF() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/imagetopdf" />
+
+<section style={contentSection}>
           <h2 style={contentTitle}>What does an image to PDF converter do?</h2>
           <p style={para}>
             An image to PDF converter turns one or more images into a PDF document. Each uploaded image becomes a page in the

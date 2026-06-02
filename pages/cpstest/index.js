@@ -282,7 +282,10 @@ export default function CPSTest() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/cpstest" />
+
+<section style={contentSection}>
           <h2 style={contentTitle}>What is CPS?</h2>
           <p style={para}>
             CPS means clicks per second. It measures how many clicks you can make in one second during a timed test.

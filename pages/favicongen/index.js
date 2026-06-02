@@ -385,7 +385,10 @@ Use a square, simple, high-contrast logo for best results. Very detailed logos m
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/favicongen" />
+
+<section style={contentSection}>
           <h2 style={contentTitle}>What is a favicon?</h2>
           <p style={para}>
             A favicon is the small icon shown in browser tabs, bookmarks, history lists, search interfaces, and saved website

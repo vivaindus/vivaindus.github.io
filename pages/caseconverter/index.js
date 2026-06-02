@@ -292,7 +292,10 @@ export default function CaseConverter() {
           </div>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/caseconverter" />
+
+<section style={contentSection}>
           <h2 style={contentTitle}>What is a case converter?</h2>
           <p style={para}>
             A case converter changes the capitalization and structure of text. It can turn a paragraph into uppercase,

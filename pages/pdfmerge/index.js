@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
 import { PDFDocument } from 'pdf-lib';
+import RelatedTools from '../../components/RelatedTools';
 
 export default function PDFMerge() {
   const [mounted, setMounted] = useState(false);
@@ -366,7 +367,10 @@ export default function PDFMerge() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/pdfmerge" />
+
+<section style={contentSection}>
           <h2>Free PDF merger to combine PDF files online</h2>
           <p>
             This PDF merger lets you combine multiple PDF files into one document directly in your browser. It is useful when

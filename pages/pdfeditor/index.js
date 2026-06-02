@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
+import RelatedTools from '../../components/RelatedTools';
 
 const TOOL_DEFS = [
   { id: 'select', label: 'Select', icon: '↔️', help: 'Select, move, resize and edit placed items.' },
@@ -985,7 +986,10 @@ const dataUrlToUint8Array = dataUrl => {
 
         
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/pdfeditor" />
+
+<section style={contentSection}>
           <h2>Free PDF editor and annotator online</h2>
           <p>
             This PDF Editor helps you add text, signatures, stamps, images, highlights, boxes, headers, footers,

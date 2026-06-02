@@ -389,7 +389,10 @@ export default function ReactionTest() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/reactiontest" />
+
+<section style={contentSection}>
           <h2>What is a reaction time test?</h2>
           <p>
             A reaction time test measures how quickly you respond after seeing a stimulus. In this test, the screen changes

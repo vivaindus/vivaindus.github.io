@@ -364,7 +364,10 @@ export default function ThumbnailDownloader() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/thumbnaildownloader" />
+
+<section style={contentSection}>
           <h2>Free YouTube thumbnail downloader for HD video covers</h2>
           <p>
             This YouTube thumbnail downloader helps you extract thumbnail images from YouTube videos, Shorts and share links.

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
 import { PDFDocument } from 'pdf-lib';
 import JSZip from 'jszip';
+import RelatedTools from '../../components/RelatedTools';
 
 export default function PDFSplit() {
   const [mounted, setMounted] = useState(false);
@@ -357,7 +358,10 @@ export default function PDFSplit() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/pdfsplit" />
+
+<section style={contentSection}>
           <h2>Free PDF splitter to extract pages from PDF files</h2>
           <p>
             This PDF splitter lets you extract selected pages from a PDF or split every page into individual PDF files.

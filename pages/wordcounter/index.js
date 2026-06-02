@@ -313,7 +313,10 @@ export default function WordCounter() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/wordcounter" />
+
+<section style={contentSection}>
           <h2>Free word counter, character counter and text analyzer</h2>
           <p>
             This word counter helps writers, students, bloggers, marketers and business owners count words, characters,

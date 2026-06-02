@@ -453,7 +453,10 @@ export default function PasswordGenerator() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/passwordgen" />
+
+<section style={contentSection}>
           <h2>How this secure password generator works</h2>
           <p>
             A strong password must be difficult to guess and difficult to brute-force. This password generator creates random

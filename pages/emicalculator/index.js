@@ -441,7 +441,10 @@ export default function EMICalculator() {
           </div>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/emicalculator" />
+
+<section style={contentSection}>
           <h2 style={contentTitle}>Understanding loan interest types</h2>
           <p style={para}>
             A powerful loan calculator should not only show a monthly payment. It should also explain how the cost is being

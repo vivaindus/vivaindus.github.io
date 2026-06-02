@@ -483,7 +483,10 @@ export default function UnitConverter() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/unitconverter" />
+
+<section style={contentSection}>
           <h2>All-in-one unit converter for metric, imperial and regional units</h2>
           <p>
             This unit converter helps you convert common measurement types including length, area, weight, temperature, volume,

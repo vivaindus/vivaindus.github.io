@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
 import { PDFDocument } from 'pdf-lib';
 import { jsPDF } from 'jspdf';
+import RelatedTools from '../../components/RelatedTools';
 
 export default function PDFCompressor() {
   const [mounted, setMounted] = useState(false);
@@ -341,7 +342,10 @@ export default function PDFCompressor() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/pdfcompressor" />
+
+<section style={contentSection}>
           <h2>Free PDF compressor to reduce PDF file size online</h2>
           <p>
             This PDF compressor helps reduce PDF file size for email attachments, WhatsApp sharing, school uploads,

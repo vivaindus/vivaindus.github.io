@@ -729,7 +729,10 @@ export default function ImageResizer() {
           </div>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/imageresizer" />
+
+<section style={contentSection}>
           <h2 style={contentTitle}>What does image resizing do?</h2>
           <p style={para}>
             Image resizing changes the pixel dimensions of a picture. For example, a phone photo may be 4000 pixels wide,

@@ -496,7 +496,10 @@ export default function PDFToImage() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/pdftoimage" />
+
+<section style={contentSection}>
           <h2>What is a PDF to image converter?</h2>
           <p>
             A PDF to image converter renders each PDF page as a picture file. This is useful when you need to share a single

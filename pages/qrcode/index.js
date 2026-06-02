@@ -473,7 +473,10 @@ export default function QRCodeGen() {
           </aside>
         </section>
 
-        <section style={contentSection}>
+        
+        <RelatedTools currentPath="/qrcode" />
+
+<section style={contentSection}>
           <h2>Free QR code generator for URLs, WiFi, vCard, WhatsApp and bulk QR codes</h2>
           <p>
             SHB ToolBox QR Code Generator helps you create scannable QR codes for websites, ecommerce product pages,
