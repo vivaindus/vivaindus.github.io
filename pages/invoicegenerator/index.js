@@ -370,14 +370,6 @@ export default function InvoiceGenerator() {
     }));
   };
 
-  if (!mounted) {
-    return (
-      <div style={loadingWrap}>
-        Loading invoice generator...
-      </div>
-    );
-  }
-
   return (
     <>
       <Head>
