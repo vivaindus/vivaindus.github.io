@@ -5,7 +5,6 @@ import { jsPDF } from 'jspdf';
 import RelatedTools from '../../components/RelatedTools';
 
 export default function PDFCompressor() {
-  const [mounted, setMounted] = useState(false);
   const [pdfjsLib, setPdfjsLib] = useState(null);
   const [pdfFile, setPdfFile] = useState(null);
   const [pdfInfo, setPdfInfo] = useState(null);
@@ -137,16 +136,7 @@ export default function PDFCompressor() {
     link.click();
   };
 
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="PDF Compressor" description="Loading PDF compressor.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading PDF compression engine...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
+  
   return (
     <ToolboxLayout
       title="PDF Compressor - Reduce PDF File Size Online"
