@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import RelatedTools from './RelatedTools';
 
 // --- THE TOOL ENGINE ---
@@ -59,12 +60,18 @@ export const toolGroups = {
 
 export default function ToolboxLayout({ children, title, description }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const router = useRouter();
+    const cleanPath = router.asPath.split('?')[0].split('#')[0];
+    const canonicalUrl = cleanPath === '/'
+        ? 'https://www.shbstores.com/'
+        : `https://www.shbstores.com${cleanPath}`;
 
     return (
         <div style={{ backgroundColor: '#0f172a', minHeight: '100vh', color: '#fff', fontFamily: 'Inter, system-ui, sans-serif' }}>
             <Head>
                 <title>{title} | SHB ToolBox</title>
-                <meta name="description" content={description} />
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalUrl} />
                 {/* AdSense will be injected here via _document.js or _app.js as we fixed before */}
             </Head>
 
