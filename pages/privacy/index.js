@@ -22,16 +22,16 @@ export default function PrivacyPolicy() {
           <h2 style={h2}>1. Information you enter into tools</h2>
           <p style={para}>
             Many SHB ToolBox utilities are designed to process inputs directly in your browser. This includes tools such as
-            calculators, text converters, password generators, image tools, QR tools, and productivity utilities. In these
-            cases, the information you enter is used to generate the result on your device and is not intentionally stored
-            by SHB ToolBox.
+            calculators, text converters, password generators, image tools, QR tools, PDF tools, invoice tools, and productivity
+            utilities. In these cases, the information you enter is used to generate the result on your device and is not
+            intentionally stored by SHB ToolBox.
           </p>
 
           <h2 style={h2}>2. Files and browser-based processing</h2>
           <p style={para}>
             Several file tools, including image and PDF-related utilities, are designed with a client-side-first approach.
             Where possible, processing happens inside your browser memory. You are still responsible for checking output
-            quality, file compatibility, and whether a file is appropriate to upload, convert, download, or share.
+            quality, file compatibility, and whether a file is appropriate to upload, convert, download, edit, or share.
           </p>
 
           <h2 style={h2}>3. Contact information</h2>
@@ -50,9 +50,14 @@ export default function PrivacyPolicy() {
 
           <h2 style={h2}>5. Google AdSense and third-party vendors</h2>
           <p style={para}>
-            This website may display ads provided by Google or other advertising partners. These partners may use cookies
-            to show ads based on a user's visits to this and other websites. Users can manage ad personalization through
-            their browser or Google advertising settings.
+            This website may use Google AdSense and other third-party advertising services to display advertisements.
+            Third-party vendors, including Google, may use cookies to serve ads based on a user&apos;s prior visits to this
+            website or other websites.
+          </p>
+          <p style={para}>
+            Google&apos;s use of advertising cookies enables Google and its partners to serve ads to users based on their visit
+            to this website and/or other websites on the Internet. Users may opt out of personalized advertising by visiting
+            Google Ads Settings. Users can also manage or disable cookies through their browser settings.
           </p>
 
           <h2 style={h2}>6. External links</h2>
@@ -69,7 +74,7 @@ export default function PrivacyPolicy() {
             they are comfortable with the purpose and behavior of the specific utility.
           </p>
 
-          <h2 style={h2}>8. Children's privacy</h2>
+          <h2 style={h2}>8. Children&apos;s privacy</h2>
           <p style={para}>
             SHB ToolBox is intended for general users and is not designed to collect personal information from children.
             If you believe a child has provided personal information through a contact channel, please contact us so we can
