@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
-import RelatedTools from '../../components/RelatedTools';
 
 const TOOL_DEFS = [
   { id: 'select', label: 'Select', icon: '↔️', help: 'Select, move, resize and edit placed items.' },
@@ -663,7 +662,6 @@ const dataUrlToUint8Array = dataUrl => {
 
   return bytes;
 };
-};
   const selectedAnnotation = annotations.find(item => item.id === selectedAnnotationId);
   const currentSize = pageSizes[selectedPage - 1];
   const currentAnnotations = annotations.filter(item => item.page === selectedPage);
@@ -985,6 +983,8 @@ const dataUrlToUint8Array = dataUrl => {
           </section>
         )}
 
+        
+
         <section style={contentSection}>
           <h2>Free PDF editor and annotator online</h2>
           <p>
@@ -994,12 +994,35 @@ const dataUrlToUint8Array = dataUrl => {
           </p>
 
           <div style={seoGrid}>
-            <div style={seoCard}><h3>Add text to PDF</h3><p>Place custom text anywhere on a PDF page, then edit, resize or move it.</p></div>
-            <div style={seoCard}><h3>Sign PDF online</h3><p>Upload your signature image and place the actual signature directly on the PDF.</p></div>
-            <div style={seoCard}><h3>Add stamp or logo to PDF</h3><p>Upload an image, stamp, seal or logo and place it on a document.</p></div>
-            <div style={seoCard}><h3>Highlight PDF</h3><p>Add highlight blocks to mark important text or document areas.</p></div>
-            <div style={seoCard}><h3>Layer control</h3><p>Bring objects forward, send them backward, or place signatures above stamps.</p></div>
-            <div style={seoCard}><h3>Private PDF editing</h3><p>Your file is edited locally inside your browser and downloaded without server upload.</p></div>
+            <div style={seoCard}>
+              <h3>Add text to PDF</h3>
+              <p>Place custom text anywhere on a PDF page, then edit, resize or move it.</p>
+            </div>
+
+            <div style={seoCard}>
+              <h3>Sign PDF online</h3>
+              <p>Upload your signature image and place the actual signature directly on the PDF.</p>
+            </div>
+
+            <div style={seoCard}>
+              <h3>Add stamp or logo to PDF</h3>
+              <p>Upload an image, stamp, seal or logo and place it on a document.</p>
+            </div>
+
+            <div style={seoCard}>
+              <h3>Highlight PDF</h3>
+              <p>Add highlight blocks to mark important text or document areas.</p>
+            </div>
+
+            <div style={seoCard}>
+              <h3>Layer control</h3>
+              <p>Bring objects forward, send them backward, or place signatures above stamps.</p>
+            </div>
+
+            <div style={seoCard}>
+              <h3>Private PDF editing</h3>
+              <p>Your file is edited locally inside your browser and downloaded without server upload.</p>
+            </div>
           </div>
         </section>
       </div>
