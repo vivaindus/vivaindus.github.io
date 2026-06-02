@@ -307,17 +307,6 @@ export default function TaskList() {
       showToast('Could not import JSON backup.');
     }
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="Task List" description="Loading task list.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading private task workspace...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="Task List - Private To-Do List, Daily Planner and Priority Manager"

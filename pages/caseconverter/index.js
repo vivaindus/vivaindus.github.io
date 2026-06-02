@@ -187,17 +187,6 @@ export default function CaseConverter() {
   const sortLinesZA = (value) => value.split(/\r\n|\r|\n/).sort((a, b) => b.localeCompare(a)).join('\n');
   const reverseLines = (value) => value.split(/\r\n|\r|\n/).reverse().join('\n');
   const addLineNumbers = (value) => value.split(/\r\n|\r|\n/).map((line, index) => `${index + 1}. ${line}`).join('\n');
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="Case Converter" description="Convert and clean text online.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading text case converter...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="Case Converter - Convert Text to Uppercase, Lowercase, Title Case, camelCase and More"

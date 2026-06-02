@@ -234,17 +234,6 @@ export default function PasswordGenerator() {
     setHistory([]);
     showToast('Session history cleared.');
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="Password Generator" description="Loading secure password generator.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading secure generator...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="Secure Password Generator - Create Strong Random Passwords"

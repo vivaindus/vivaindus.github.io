@@ -70,17 +70,6 @@ export default function AgeCalculator() {
 
         setNotification('Age calculated successfully 📅');
     };
-
-    if (!mounted) {
-        return (
-            <ToolboxLayout title="Age Calculator" description="Calculate age in years, months, and days.">
-                <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-                    Loading age calculator...
-                </div>
-            </ToolboxLayout>
-        );
-    }
-
     return (
         <ToolboxLayout
             title="Age Calculator - Calculate Exact Age in Years, Months and Days"

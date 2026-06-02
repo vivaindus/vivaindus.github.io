@@ -253,17 +253,6 @@ export default function QRCodeGen() {
       showToast('Copy failed.');
     }
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="QR Code Generator" description="Loading QR code generator.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading QR engine...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="QR Code Generator - Free URL, WiFi, vCard and Bulk QR Maker"

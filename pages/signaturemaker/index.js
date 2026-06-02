@@ -213,17 +213,6 @@ export default function SignatureMaker() {
 
     downloadUploadedSignature(withBackground);
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="Signature Maker" description="Loading signature maker.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading signature studio...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="Signature Maker - Draw, Type or Upload Digital Signature"

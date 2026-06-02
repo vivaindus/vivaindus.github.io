@@ -430,17 +430,6 @@ export default function ImageResizer() {
       showToast('⚠️ Copy failed. Please copy manually.');
     }
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="Image Resizer" description="Resize images online.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading image resizer...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="Image Resizer - Resize, Crop and Convert Images Online"

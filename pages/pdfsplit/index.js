@@ -166,17 +166,6 @@ export default function PDFSplit() {
       setProcessing(false);
     }
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="PDF Splitter" description="Loading PDF splitter.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading PDF split engine...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="PDF Splitter - Extract Pages from PDF Online"

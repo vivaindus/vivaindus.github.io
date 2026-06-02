@@ -143,17 +143,6 @@ export default function SIPCalculator() {
     });
     showToast('Examples reset.');
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="SIP Calculator" description="Loading SIP calculator.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Initializing investment calculator...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="SIP Calculator - Step-Up SIP, Lumpsum, Goal and Compound Return Planner"

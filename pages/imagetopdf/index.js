@@ -271,17 +271,6 @@ export default function ImageToPDF() {
       setGenerating(false);
     }
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="Image to PDF Converter" description="Convert images to PDF online.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading image to PDF converter...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="Image to PDF Converter - Convert JPG, PNG and WebP Images to PDF"

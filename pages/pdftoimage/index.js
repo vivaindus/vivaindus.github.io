@@ -277,17 +277,6 @@ export default function PDFToImage() {
       setZipping(false);
     }
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="PDF to Image Converter" description="Loading PDF converter.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading PDF rendering engine...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="PDF to Image Converter - Convert PDF to JPG, PNG and WebP"

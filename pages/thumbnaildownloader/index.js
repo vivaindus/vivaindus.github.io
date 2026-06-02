@@ -160,17 +160,6 @@ export default function ThumbnailDownloader() {
     if (!thumbnails.length) return;
     downloadImage(thumbnails[0]);
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="YouTube Thumbnail Downloader" description="Loading YouTube thumbnail downloader.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading thumbnail extractor...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="YouTube Thumbnail Downloader - HD, Shorts and Video Cover Extractor"

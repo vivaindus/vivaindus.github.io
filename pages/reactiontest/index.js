@@ -192,17 +192,6 @@ export default function ReactionTest() {
 
     showToast('Saved reaction data cleared.');
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="Reaction Time Test" description="Loading reaction test.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Calibrating reaction timer...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="Reaction Time Test - Visual Speed Benchmark in Milliseconds"

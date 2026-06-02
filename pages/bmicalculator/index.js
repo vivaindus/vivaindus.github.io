@@ -106,17 +106,6 @@ export default function BMICalculator() {
 
         setNotification('BMI calculated successfully ⚖️');
     };
-
-    if (!mounted) {
-        return (
-            <ToolboxLayout title="BMI Calculator" description="Calculate body mass index.">
-                <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-                    Loading BMI calculator...
-                </div>
-            </ToolboxLayout>
-        );
-    }
-
     return (
         <ToolboxLayout
             title="BMI Calculator - Calculate Body Mass Index Online"

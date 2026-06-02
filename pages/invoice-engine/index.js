@@ -233,15 +233,6 @@ export default function InvoiceEngine() {
       status: prev.locked ? 'DRAFT' : 'FINAL'
     }));
   };
-
-  if (!mounted) {
-    return (
-      <div style={loadingWrap}>
-        Loading invoice engine...
-      </div>
-    );
-  }
-
   return (
     <>
       <Head>

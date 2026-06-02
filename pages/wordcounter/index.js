@@ -95,17 +95,6 @@ export default function WordCounter() {
     setText(SAMPLE_TEXT);
     showToast('Sample text loaded.');
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="Word Counter" description="Loading word counter.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading text analyzer...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="Word Counter - Character Counter, Reading Time and Keyword Density Tool"

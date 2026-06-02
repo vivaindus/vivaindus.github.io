@@ -227,17 +227,6 @@ export default function PassportPhotoMaker() {
 
     return canvas;
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="Passport Photo Maker" description="Loading passport photo maker.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading passport photo studio...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="Passport Photo Maker - Resize Photo for Passport, Visa and ID"

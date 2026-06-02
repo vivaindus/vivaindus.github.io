@@ -159,17 +159,6 @@ export default function PDFMerge() {
       setMerging(false);
     }
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="PDF Merger" description="Loading PDF merger.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading PDF merge engine...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="PDF Merger - Combine Multiple PDF Files Online"

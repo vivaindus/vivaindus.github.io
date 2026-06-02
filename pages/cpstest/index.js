@@ -146,17 +146,6 @@ export default function CPSTest() {
     setHighScore(0);
     setNotification('Local CPS history cleared');
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="CPS Test" description="Measure clicks per second online.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading CPS test...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="CPS Test - Clicks Per Second Counter Online"

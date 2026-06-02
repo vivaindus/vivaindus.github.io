@@ -151,17 +151,6 @@ export default function PercentageCalculator() {
     setCompound({ start: 1000, rate: 8, years: 5 });
     showToast('Examples reset.');
   };
-
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="Percentage Calculator" description="Loading percentage calculator.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading percentage calculator...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="Percentage Calculator - Business, VAT, Discount, Margin and Growth"
