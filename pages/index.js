@@ -3,26 +3,34 @@ import Link from 'next/link';
 import ToolboxLayout, { toolGroups } from '../components/ToolboxLayout';
 
 const toolDetails = {
-  '/invoicegenerator': 'Create clean UAE-ready invoices with item lines, totals, tax details, and printable output for small business billing.',
-  '/emicalculator': 'Estimate monthly loan payments, total interest, repayment schedules, and compare practical repayment strategies.',
-  '/sipcalculator': 'Plan monthly investments with compounding projections, long-term growth estimates, and easy-to-read summaries.',
-  '/percentagecalculator': 'Calculate percentage change, discount, markup, margin, VAT-style additions, and commercial math faster.',
-  '/tasklist': 'Organize priorities, track tasks, and export clean visual task lists without creating an account.',
-  '/imagecompressor': 'Compress images directly in your browser to reduce file size while keeping useful visual quality.',
-  '/imageresizer': 'Resize photos for websites, forms, social media, thumbnails, and custom pixel dimensions.',
-  '/pdftoimage': 'Convert PDF pages into high-resolution image files for sharing, previews, and document workflows.',
-  '/imagetopdf': 'Combine multiple images into a clean PDF document with practical page sizing options.',
-  '/favicongen': 'Generate favicon and app icon files for websites, browser tabs, mobile shortcuts, and branding packages.',
-  '/thumbnaildownloader': 'Preview and download available public YouTube video thumbnails in multiple resolutions.',
-  '/qrcode': 'Generate QR codes for links, WiFi, contact details, and business use with bulk-friendly output options.',
-  '/caseconverter': 'Convert text into uppercase, lowercase, title case, camelCase, snake_case, kebab-case, and more.',
-  '/wordcounter': 'Count words, characters, sentences, paragraphs, and estimate reading time for articles and documents.',
-  '/passwordgen': 'Generate strong random passwords locally with practical strength indicators and copy-friendly controls.',
-  '/unitconverter': 'Convert common measurement units, technical units, and regional land units with simple input controls.',
-  '/cpstest': 'Measure clicks per second with a focused speed test and rank-based results.',
-  '/reactiontest': 'Check reaction speed in milliseconds with a simple visual timing challenge.',
-  '/bmicalculator': 'Calculate BMI and review general body mass index categories with privacy-first local calculation.',
-  '/agecalculator': 'Calculate exact age, time lived, next birthday countdown, and date differences.'
+  '/invoicegenerator': 'Create clean UAE-ready invoices with item lines, totals, tax details, discounts, signatures, printable PDF output, and browser draft saving.',
+  '/emicalculator': 'Estimate monthly loan payments, total interest, repayment schedules, interest types, and practical repayment strategies.',
+  '/sipcalculator': 'Plan monthly investments with compounding projections, long-term growth estimates, step-up SIP options, and easy-to-read summaries.',
+  '/percentagecalculator': 'Calculate percentage change, discount, markup, margin, VAT-style additions, reverse percentages, and commercial math faster.',
+  '/tasklist': 'Organize priorities, track tasks, manage due dates, add notes, filter work, and export clean visual task lists without creating an account.',
+
+  '/imagecompressor': 'Compress images directly in your browser to reduce file size while keeping useful visual quality for websites, forms, and sharing.',
+  '/imageresizer': 'Resize photos for websites, forms, social media, thumbnails, passport-style dimensions, and custom pixel sizes.',
+  '/pdftoimage': 'Convert PDF pages into high-resolution PNG or JPG image files for sharing, previews, document workflows, and page extraction.',
+  '/imagetopdf': 'Combine multiple JPG, PNG, WebP, and photo scans into a clean PDF document with page size, margin, fit, crop, and numbering options.',
+  '/pdfmerge': 'Merge multiple PDF files into one organized document with first-page thumbnails, drag-and-drop ordering, and downloadable output.',
+  '/pdfsplit': 'Split PDF files by page range, extract selected pages, or separate every page into smaller PDF documents directly in the browser.',
+  '/pdfcompressor': 'Reduce PDF file size for email, WhatsApp, online forms, visa portals, job applications, school uploads, and document sharing.',
+  '/pdfeditor': 'Edit and annotate PDF files by adding text, signatures, stamps, images, highlights, boxes, headers, footers, page numbers, and metadata.',
+  '/signaturemaker': 'Create transparent digital signatures by drawing, typing, or cleaning uploaded signature images for invoices, forms, PDFs, and documents.',
+  '/passportphoto': 'Create passport, visa, ID, and application photos with crop controls, background options, common presets, and printable photo sheets.',
+
+  '/favicongen': 'Generate favicon and app icon files for websites, browser tabs, mobile shortcuts, PWA icons, and branding packages.',
+  '/thumbnaildownloader': 'Preview and download available public YouTube video thumbnails in multiple resolutions for research, blogs, and content planning.',
+  '/qrcode': 'Generate QR codes for links, WiFi, contact details, WhatsApp, email, phone, SMS, locations, events, and bulk business use.',
+  '/caseconverter': 'Convert text into uppercase, lowercase, title case, sentence case, camelCase, snake_case, kebab-case, and more.',
+  '/wordcounter': 'Count words, characters, sentences, paragraphs, reading time, keyword density, and content limits for articles and documents.',
+  '/passwordgen': 'Generate strong random passwords locally with practical strength indicators, passphrase options, history controls, and copy-friendly output.',
+  '/unitconverter': 'Convert common measurement units, technical units, digital storage, cooking units, and regional land units with simple input controls.',
+  '/cpstest': 'Measure clicks per second with focused speed tests, timer modes, rank-based results, and performance tracking.',
+  '/reactiontest': 'Check reaction speed in milliseconds with single-round and multi-round modes, averages, best score, consistency, and false-start tracking.',
+  '/bmicalculator': 'Calculate BMI and review general body mass index categories with privacy-first local calculation and simple health guidance.',
+  '/agecalculator': 'Calculate exact age, time lived, next birthday countdown, date differences, and useful life milestone details.'
 };
 
 export default function Home() {
