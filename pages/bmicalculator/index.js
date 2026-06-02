@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
+import RelatedTools from '../../components/RelatedTools';
 
 export default function BMICalculator() {
     const [mounted, setMounted] = useState(false);
@@ -247,6 +248,9 @@ export default function BMICalculator() {
                         </div>
                     </div>
                 </section>
+
+
+                <RelatedTools currentPath="/bmicalculator" />
 
                 <section style={contentSection}>
                     <h2 style={contentTitle}>How BMI is calculated</h2>

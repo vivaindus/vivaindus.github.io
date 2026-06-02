@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
+import RelatedTools from '../../components/RelatedTools';
 
 export default function AgeCalculator() {
     const [mounted, setMounted] = useState(false);
@@ -168,6 +169,9 @@ export default function AgeCalculator() {
                         )}
                     </div>
                 </section>
+
+
+                <RelatedTools currentPath="/agecalculator" />
 
                 <section style={contentSection}>
                     <h2 style={contentTitle}>How the age calculator works</h2>

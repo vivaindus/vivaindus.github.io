@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
+import RelatedTools from '../../components/RelatedTools';
 
 const PRIORITIES = {
   High: { label: 'High', color: '#f87171', rank: 3, icon: '🔥' },

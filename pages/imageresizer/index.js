@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
+import RelatedTools from '../../components/RelatedTools';
 
 const PRESETS = [
   { name: 'Instagram Square Post', w: 1080, h: 1080, cat: 'Instagram' },

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
+import RelatedTools from '../../components/RelatedTools';
 
 const durationOptions = [5, 10, 15, 30];
 

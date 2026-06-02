@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
+import RelatedTools from '../../components/RelatedTools';
 
 const SAMPLE_TEXT = `SHB ToolBox helps writers, students, bloggers and marketers analyze text quickly. Paste your article, essay, caption or website content to count words, characters, sentences, paragraphs and reading time. You can also check keyword density, SEO title length and meta description limits before publishing.`;
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
+import RelatedTools from '../../components/RelatedTools';
 
 export default function CaseConverter() {
   const [mounted, setMounted] = useState(false);

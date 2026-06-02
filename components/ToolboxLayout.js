@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import RelatedTools from './RelatedTools';
 
 // --- THE TOOL ENGINE ---
 export const toolGroups = {
@@ -23,6 +24,12 @@ export const toolGroups = {
             { name: 'Image Resizer', desc: 'Social media pixel control.', href: '/imageresizer' },
             { name: 'PDF to Image', desc: 'HD extraction of PDF pages.', href: '/pdftoimage' },
             { name: 'Image to PDF', desc: 'Convert photos to documents.', href: '/imagetopdf' },
+            { name: 'PDF Merger', desc: 'Combine multiple PDFs.', href: '/pdfmerge' },
+            { name: 'PDF Splitter', desc: 'Extract PDF pages.', href: '/pdfsplit' },
+            { name: 'PDF Compressor', desc: 'Reduce PDF file size.', href: '/pdfcompressor' },
+            { name: 'PDF Editor', desc: 'Annotate, sign and edit PDFs.', href: '/pdfeditor' },
+            { name: 'Signature Maker', desc: 'Draw or type signatures.', href: '/signaturemaker' },
+            { name: 'Passport Photo Maker', desc: 'Create visa and ID photos.', href: '/passportphoto' },
             { name: 'Favicon Gen', desc: 'Web & App icon package.', href: '/favicongen' },
             { name: 'YT Thumbnails', desc: 'Extract 4K video covers.', href: '/thumbnaildownloader' },
             { name: 'Bulk QR Studio', desc: 'Generate QR codes in ZIP.', href: '/qrcode' },
@@ -94,6 +101,8 @@ export default function ToolboxLayout({ children, title, description }) {
             <main style={{ minHeight: '80vh', paddingTop: '80px' }}>
                 {children}
             </main>
+
+            <RelatedTools />
 
             {/* --- SHARED FOOTER --- */}
             <footer style={footerS}>

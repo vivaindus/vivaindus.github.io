@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
 import JSZip from 'jszip';
+import RelatedTools from '../../components/RelatedTools';
 
 const ICON_SIZES = [
   { size: 16, name: 'favicon-16x16.png', label: 'Browser tab' },

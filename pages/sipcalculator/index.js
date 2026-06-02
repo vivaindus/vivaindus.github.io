@@ -12,6 +12,7 @@ import {
   Filler
 } from 'chart.js';
 import { Doughnut, Line } from 'react-chartjs-2';
+import RelatedTools from '../../components/RelatedTools';
 
 export default function SIPCalculator() {
   const [mounted, setMounted] = useState(false);

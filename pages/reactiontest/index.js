@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
+import RelatedTools from '../../components/RelatedTools';
 
 const MODES = {
   single: { label: 'Single Test', rounds: 1, desc: 'Quick one-round reaction check.' },

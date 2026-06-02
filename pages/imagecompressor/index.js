@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
 import imageCompression from 'browser-image-compression';
+import RelatedTools from '../../components/RelatedTools';
 
 const outputFormats = {
   original: { label: 'Keep original format', fileType: undefined, extension: null },

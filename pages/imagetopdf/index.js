@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
+import RelatedTools from '../../components/RelatedTools';
 
 const PAGE_SIZES = [
   { value: 'a4', label: 'A4 - International', note: '210 × 297 mm' },

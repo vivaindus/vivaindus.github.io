@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
 import JSZip from 'jszip';
 import { QRCodeCanvas } from 'qrcode.react';
+import RelatedTools from '../../components/RelatedTools';
 
 const QR_TYPES = {
   url: {

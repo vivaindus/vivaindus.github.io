@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { QRCodeCanvas } from 'qrcode.react';
+import RelatedTools from '../../components/RelatedTools';
 
 const today = new Date().toISOString().slice(0, 10);
 

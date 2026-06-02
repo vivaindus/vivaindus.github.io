@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
+import RelatedTools from '../../components/RelatedTools';
 
 const currencies = ['AED', 'USD', 'EUR', 'GBP', 'INR', 'SAR', 'QAR', 'OMR'];
 

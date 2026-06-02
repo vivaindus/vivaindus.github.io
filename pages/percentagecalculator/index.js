@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
+import RelatedTools from '../../components/RelatedTools';
 
 export default function PercentageCalculator() {
   const [mounted, setMounted] = useState(false);

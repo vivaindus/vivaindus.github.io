@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
 import JSZip from 'jszip';
+import RelatedTools from '../../components/RelatedTools';
 
 const OUTPUT_FORMATS = [
   { value: 'image/png', label: 'PNG - lossless quality', extension: 'png' },
