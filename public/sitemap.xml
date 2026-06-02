@@ -2,16 +2,33 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://www.shbstores.com/</loc></url>
   <url><loc>https://www.shbstores.com/about</loc></url>
-  <url><loc>https://www.shbstores.com/privacy</loc></url>
   <url><loc>https://www.shbstores.com/contact</loc></url>
-  <url><loc>https://www.shbstores.com/cpstest</loc></url>
-  <url><loc>https://www.shbstores.com/bmicalculator</loc></url>
-  <url><loc>https://www.shbstores.com/agecalculator</loc></url>
-  <url><loc>https://www.shbstores.com/reactiontest</loc></url>
-  <url><loc>https://www.shbstores.com/unitconverter</loc></url>
-  <url><loc>https://www.shbstores.com/passwordgen</loc></url>
-  <url><loc>https://www.shbstores.com/wordcounter</loc></url>
-  <url><loc>https://www.shbstores.com/qrcode</loc></url>
+  <url><loc>https://www.shbstores.com/privacy</loc></url>
+  <url><loc>https://www.shbstores.com/terms</loc></url>
+  <url><loc>https://www.shbstores.com/disclaimer</loc></url>
+
+  <url><loc>https://www.shbstores.com/invoicegenerator</loc></url>
+  <url><loc>https://www.shbstores.com/invoice-engine</loc></url>
+  <url><loc>https://www.shbstores.com/emicalculator</loc></url>
+  <url><loc>https://www.shbstores.com/sipcalculator</loc></url>
   <url><loc>https://www.shbstores.com/percentagecalculator</loc></url>
   <url><loc>https://www.shbstores.com/tasklist</loc></url>
+
+  <url><loc>https://www.shbstores.com/imagecompressor</loc></url>
+  <url><loc>https://www.shbstores.com/imageresizer</loc></url>
+  <url><loc>https://www.shbstores.com/pdftoimage</loc></url>
+  <url><loc>https://www.shbstores.com/imagetopdf</loc></url>
+  <url><loc>https://www.shbstores.com/favicongen</loc></url>
+  <url><loc>https://www.shbstores.com/thumbnaildownloader</loc></url>
+  <url><loc>https://www.shbstores.com/qrcode</loc></url>
+
+  <url><loc>https://www.shbstores.com/caseconverter</loc></url>
+  <url><loc>https://www.shbstores.com/wordcounter</loc></url>
+  <url><loc>https://www.shbstores.com/passwordgen</loc></url>
+  <url><loc>https://www.shbstores.com/unitconverter</loc></url>
+
+  <url><loc>https://www.shbstores.com/cpstest</loc></url>
+  <url><loc>https://www.shbstores.com/reactiontest</loc></url>
+  <url><loc>https://www.shbstores.com/bmicalculator</loc></url>
+  <url><loc>https://www.shbstores.com/agecalculator</loc></url>
 </urlset>

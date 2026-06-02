@@ -100,9 +100,11 @@ export default function ToolboxLayout({ children, title, description }) {
                 <div style={{ marginBottom: '20px', display:'flex', flexWrap:'wrap', justifyContent:'center', gap:'15px' }}>
                     <Link href="/about" style={fLink}>About Us</Link>
                     <Link href="/privacy" style={fLink}>Privacy Policy</Link>
+                    <Link href="/terms" style={fLink}>Terms of Use</Link>
+                    <Link href="/disclaimer" style={fLink}>Disclaimer</Link>
                     <Link href="/contact" style={fLink}>Contact Us</Link>
                 </div>
-                <p style={{color:'#475569', fontSize:'0.75rem'}}>&copy; 2024 SHB ToolBox - Professional Utility Ecosystem</p>
+                <p style={{color:'#475569', fontSize:'0.75rem'}}>&copy; 2026 SHB ToolBox by SHB Stores. All rights reserved.</p>
             </footer>
         </div>
     );

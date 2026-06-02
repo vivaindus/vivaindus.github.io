@@ -1,206 +1,679 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
 
+const MODES = {
+  single: { label: 'Single Test', rounds: 1, desc: 'Quick one-round reaction check.' },
+  challenge5: { label: '5-Round Challenge', rounds: 5, desc: 'Better average with fewer lucky clicks.' },
+  pro10: { label: '10-Round Pro Test', rounds: 10, desc: 'More reliable benchmark for serious testing.' }
+};
+
 export default function ReactionTest() {
-    const [mounted, setMounted] = useState(false);
-    const [gameState, setGameState] = useState('waiting'); 
-    const [startTime, setStartTime] = useState(0);
-    const [result, setResult] = useState(null);
-    const [history, setHistory] = useState([]);
-    const [highScore, setHighScore] = useState(null);
-    const [goColor, setGoColor] = useState('#22c55e');
-    const [notification, setNotification] = useState('');
-    const timerRef = useRef(null);
+  const [mounted, setMounted] = useState(false);
+  const [gameState, setGameState] = useState('idle');
+  const [mode, setMode] = useState('challenge5');
+  const [roundIndex, setRoundIndex] = useState(0);
+  const [currentResult, setCurrentResult] = useState(null);
+  const [rounds, setRounds] = useState([]);
+  const [falseStarts, setFalseStarts] = useState(0);
+  const [personalBest, setPersonalBest] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [goColor, setGoColor] = useState('#22c55e');
+  const [notification, setNotification] = useState('');
 
-    // Hydration Guard & Load Best
-    useEffect(() => {
-        setMounted(true);
-        const savedHistory = JSON.parse(localStorage.getItem('shb_react_history')) || [];
-        const savedBest = localStorage.getItem('shb_react_best');
-        setHistory(savedHistory);
-        if (savedBest) setHighScore(parseInt(savedBest));
-    }, []);
+  const timerRef = useRef(null);
+  const startTimeRef = useRef(0);
+  const activeRef = useRef(false);
 
-    // Toast Logic
-    useEffect(() => {
-        if (notification) {
-            const timer = setTimeout(() => setNotification(''), 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [notification]);
+  const targetRounds = MODES[mode].rounds;
 
-    const startTest = () => {
-        setGameState('ready');
-        setResult(null);
-        const delay = Math.floor(Math.random() * 3000) + 2000; // 2-5 seconds
-        timerRef.current = setTimeout(() => {
-            setGameState('click');
-            setStartTime(Date.now());
-        }, delay);
+  const stats = useMemo(() => calculateStats(rounds), [rounds]);
+  const tier = useMemo(() => getPerformanceTier(stats.average), [stats.average]);
+
+  useEffect(() => {
+    setMounted(true);
+
+    try {
+      const savedBest = localStorage.getItem('shb_reaction_best');
+      const savedHistory = JSON.parse(localStorage.getItem('shb_reaction_history') || '[]');
+
+      if (savedBest) setPersonalBest(Number(savedBest));
+      if (Array.isArray(savedHistory)) setHistory(savedHistory.slice(0, 20));
+    } catch {
+      // Ignore local storage issues.
+    }
+
+    return () => {
+      clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!notification) return;
+    const timer = setTimeout(() => setNotification(''), 3000);
+    return () => clearTimeout(timer);
+  }, [notification]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.code === 'Space' || event.code === 'Enter') {
+        event.preventDefault();
+        handleAction();
+      }
     };
 
-    const handleAreaClick = () => {
-        if (gameState === 'waiting' || gameState === 'result') {
-            startTest();
-        } else if (gameState === 'ready') {
-            clearTimeout(timerRef.current);
-            setGameState('result');
-            setResult('Too Soon!');
-            setNotification('⚠️ Slow down! Wait for the color change.');
-        } else if (gameState === 'click') {
-            const time = Date.now() - startTime;
-            setResult(`${time} ms`);
-            setGameState('result');
-            
-            let newBest = highScore;
-            if (highScore === null || time < highScore) {
-                newBest = time;
-                setHighScore(time);
-                localStorage.setItem('shb_react_best', time);
-                setNotification('NEW PERSONAL BEST! ⚡');
-            } else {
-                setNotification('Great response! ✅');
-            }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
 
-            const newHistory = [{time, id: Date.now()}, ...history].slice(0, 5);
-            setHistory(newHistory);
-            localStorage.setItem('shb_react_history', JSON.stringify(newHistory));
+  const showToast = (message) => {
+    setNotification(message);
+  };
+
+  const resetCurrentTest = () => {
+    clearTimeout(timerRef.current);
+    activeRef.current = false;
+    setGameState('idle');
+    setRoundIndex(0);
+    setRounds([]);
+    setCurrentResult(null);
+    setFalseStarts(0);
+  };
+
+  const startTest = () => {
+    clearTimeout(timerRef.current);
+    activeRef.current = true;
+    setRounds([]);
+    setFalseStarts(0);
+    setRoundIndex(1);
+    setCurrentResult(null);
+    startWaitingRound(1);
+  };
+
+  const startWaitingRound = (nextRound) => {
+    clearTimeout(timerRef.current);
+
+    setGameState('waiting');
+    setCurrentResult(null);
+    setRoundIndex(nextRound);
+
+    const delay = secureRandomDelay(1800, 5200);
+
+    timerRef.current = setTimeout(() => {
+      if (!activeRef.current) return;
+      startTimeRef.current = performance.now();
+      setGameState('go');
+    }, delay);
+  };
+
+  const handleAction = () => {
+    if (gameState === 'idle' || gameState === 'finished' || gameState === 'early') {
+      startTest();
+      return;
+    }
+
+    if (gameState === 'waiting') {
+      clearTimeout(timerRef.current);
+      activeRef.current = false;
+      setFalseStarts(prev => prev + 1);
+      setCurrentResult({ type: 'early', label: 'Too Soon' });
+      setGameState('early');
+      showToast('Too soon. Wait for the screen to turn green.');
+      return;
+    }
+
+    if (gameState === 'go') {
+      const reaction = Math.round(performance.now() - startTimeRef.current);
+      const nextRounds = [...rounds, reaction];
+
+      setRounds(nextRounds);
+      setCurrentResult({ type: 'success', value: reaction, label: `${reaction} ms` });
+
+      if (personalBest === null || reaction < personalBest) {
+        setPersonalBest(reaction);
+        try {
+          localStorage.setItem('shb_reaction_best', String(reaction));
+        } catch {
+          // Ignore local storage issues.
         }
+        showToast('New personal best.');
+      } else {
+        showToast('Reaction recorded.');
+      }
+
+      if (nextRounds.length >= targetRounds) {
+        finishTest(nextRounds);
+      } else {
+        setGameState('between');
+      }
+    }
+
+    if (gameState === 'between') {
+      startWaitingRound(rounds.length + 1);
+    }
+  };
+
+  const finishTest = (finalRounds) => {
+    activeRef.current = false;
+    const finalStats = calculateStats(finalRounds);
+    const record = {
+      id: Date.now(),
+      mode,
+      average: finalStats.average,
+      best: finalStats.best,
+      rounds: finalRounds,
+      falseStarts
     };
 
-    if (!mounted) return <ToolboxLayout title="Reaction Test" description="Loading..."><div style={{padding:'100px', textAlign:'center', color:'#94a3b8'}}>Calibrating Neurological Timer...</div></ToolboxLayout>;
+    setGameState('finished');
 
+    setHistory(prev => {
+      const next = [record, ...prev].slice(0, 20);
+      try {
+        localStorage.setItem('shb_reaction_history', JSON.stringify(next));
+      } catch {
+        // Ignore local storage issues.
+      }
+      return next;
+    });
+  };
+
+  const clearSavedData = () => {
+    setHistory([]);
+    setPersonalBest(null);
+    resetCurrentTest();
+
+    try {
+      localStorage.removeItem('shb_reaction_best');
+      localStorage.removeItem('shb_reaction_history');
+    } catch {
+      // Ignore local storage issues.
+    }
+
+    showToast('Saved reaction data cleared.');
+  };
+
+  if (!mounted) {
     return (
-        <ToolboxLayout 
-            title="Professional Reaction Time Test - Benchmarking Cognitive Speed" 
-            description="Test your visual reaction speed in milliseconds. Compare your score with professional gamers and learn the neuroscience behind human response times."
-        >
-            <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 20px' }}>
-                
-                {notification && (
-                    <div style={{ position: 'fixed', top: '80px', right: '20px', background: '#38bdf8', color: '#0f172a', padding: '12px 24px', borderRadius: '10px', fontWeight: 'bold', zIndex: 1000, boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }}>
-                        {notification}
-                    </div>
-                )}
-
-                {/* --- TOP SECTION: THE HOOK --- */}
-                <div style={{ textAlign: 'center', marginBottom: '50px' }}>
-                    <h1 style={{ color: '#38bdf8', fontSize: '2.5rem' }}>Visual Reaction Speed Test</h1>
-                    <p style={{ color: '#94a3b8', fontSize: '1.2rem', maxWidth: '850px', margin: '15px auto', lineHeight: '1.6' }}>
-                        The average human reaction time is approximately <strong>250 milliseconds</strong>. Professional 
-                        Formula 1 drivers and eSports athletes often react in under 180ms. How fast is your brain 
-                        processing visual stimuli today?
-                    </p>
-                    <div style={{ display: 'inline-flex', gap: '15px', background: 'rgba(56, 189, 248, 0.1)', padding: '10px 25px', borderRadius: '50px', color: '#38bdf8', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                        <span>⚡ Millisecond Precision</span>
-                        <span>🧠 Cognitive Benchmarking</span>
-                        <span>🎨 Customizable Stimulus</span>
-                    </div>
-                </div>
-
-                {/* --- APP AREA --- */}
-                <div style={{ background: '#1e293b', padding: '35px', borderRadius: '30px', border: '1px solid #334155', boxShadow: '0 10px 40px rgba(0,0,0,0.2)', textAlign: 'center' }}>
-                    
-                    <div style={{ marginBottom: '25px', display: 'flex', justifyContent: 'center', gap: '15px', alignItems: 'center' }}>
-                        <span style={lCap}>SELECT "GO" COLOR:</span>
-                        <input type="color" value={goColor} onChange={(e)=>setGoColor(e.target.value)} style={{border:'none', width:'50px', height:'35px', cursor:'pointer', background:'transparent', outline:'none'}} title="Change target color" />
-                    </div>
-
-                    <div 
-                        onMouseDown={handleAreaClick} 
-                        style={{ 
-                            height: '350px', borderRadius: '25px', display: 'flex', flexDirection: 'column', 
-                            alignItems: 'center', justifyContent: 'center', cursor: 'pointer', 
-                            userSelect: 'none', transition: '0.1s background-color', 
-                            backgroundColor: gameState === 'ready' ? '#ef4444' : gameState === 'click' ? goColor : '#0f172a', 
-                            border: gameState === 'waiting' ? '3px dashed #334155' : 'none', 
-                            color: '#fff', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)'
-                        }}
-                    >
-                        {gameState === 'waiting' && <span style={{fontSize:'1.8rem'}}>TAP TO START</span>}
-                        {gameState === 'ready' && <span style={{fontSize:'1.8rem'}}>WAIT FOR COLOR CHANGE...</span>}
-                        {gameState === 'click' && <span style={{fontSize:'4rem', fontWeight:'900'}}>CLICK!</span>}
-                        {gameState === 'result' && <div style={{fontSize:'4rem', fontWeight:'900', color: result === 'Too Soon!' ? '#ef4444' : '#fff'}}>{result}</div>}
-                        {gameState === 'result' && <span style={{fontSize:'1rem', color:'#94a3b8', marginTop:'10px'}}>Click anywhere to restart</span>}
-                    </div>
-
-                    <div style={{ marginTop: '35px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-                        <div style={statItem}>
-                            <small style={lCap}>PERSONAL BEST</small>
-                            <div style={{ color: '#38bdf8', fontSize: '1.5rem', fontWeight: 'bold' }}>{highScore ? `${highScore} ms` : '--'}</div>
-                        </div>
-                        <div style={statItem}>
-                            <small style={lCap}>SESSION TRIALS</small>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '5px' }}>
-                                {history.length === 0 ? <span style={{color:'#475569'}}>None</span> : history.map((h, i) => (
-                                    <div key={i} title={`${h.time}ms`} style={{ width: '10px', height: '10px', borderRadius: '50%', background: h.time === highScore ? '#38bdf8' : '#334155' }}></div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* --- MASSIVE KNOWLEDGE HUB (BOTTOM SEO) --- */}
-                <div style={{ marginTop: '100px', borderTop: '1px solid #334155', paddingTop: '60px', color: '#cbd5e1', lineHeight: '1.9' }}>
-                    <h2 style={{ color: '#38bdf8', fontSize: '2.2rem', marginBottom: '30px' }}>The Neuroscience of Human Response Time</h2>
-                    <p>
-                        Reaction time is the measure of how quickly an organism responds to a stimulus. It is a fundamental 
-                        indicator of <strong>Central Nervous System (CNS)</strong> efficiency. When the screen changes color, your eyes 
-                        send a signal to the primary visual cortex, which then processes the information and triggers a motor 
-                        response from your finger. This entire journey happens in fractions of a second.
-                    </p>
-
-                    <h3 style={{ color: '#fff', marginTop: '50px', fontSize: '1.6rem' }}>Factors Affecting Your Speed</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '40px', marginTop: '40px' }}>
-                        <div>
-                            <h4 style={{ color: '#38bdf8' }}>1. Physical Readiness</h4>
-                            <p style={{ fontSize: '0.95rem', color: '#94a3b8' }}>
-                                Dehydration, fatigue, and even room temperature can slow your signals. Studies show that a 
-                                <strong>1% drop in hydration</strong> can result in a 5-10ms delay in neurological processing. 
-                                Lack of sleep has a similar effect, often mirroring the response times of alcohol impairment.
-                            </p>
-                        </div>
-                        <div>
-                            <h4 style={{ color: '#38bdf8' }}>2. Technical Input Lag</h4>
-                            <p style={{ fontSize: '0.95rem', color: '#94a3b8' }}>
-                                Your hardware acts as a bottleneck. High-refresh-rate monitors (144Hz or 240Hz) update the screen 
-                                faster than standard office monitors, effectively "showing" you the stimulus sooner. Mechanical 
-                                mouse switches further reduce the physical travel time required to register a click.
-                            </p>
-                        </div>
-                        <div>
-                            <h4 style={{ color: '#38bdf8' }}>3. Cognitive State</h4>
-                            <p style={{ fontSize: '0.95rem', color: '#94a3b8' }}>
-                                "Attention Blink" and "Choice Reaction" are cognitive phenomena where distractions or 
-                                multiple stimuli slow your brain's processing. Professional players use <strong>Neural 
-                                Priming</strong> to stay in a high-alert state for hours.
-                            </p>
-                        </div>
-                    </div>
-
-                    <h3 style={{ color: '#fff', marginTop: '50px', fontSize: '1.5rem' }}>Benchmarking Results: Where Do You Stand?</h3>
-                    <p>Use these data benchmarks to understand your performance:</p>
-                    <ul style={{ paddingLeft: '20px', marginTop: '20px' }}>
-                        <li style={{ marginBottom: '15px' }}><strong>Under 150ms:</strong> Top 0.1% of humans. Likely utilizing "pre-emptive" clicking or elite gaming hardware.</li>
-                        <li style={{ marginBottom: '15px' }}><strong>150ms - 200ms:</strong> Elite Athlete / Professional Gamer. Very high neurological alertness.</li>
-                        <li style={{ marginBottom: '15px' }}><strong>200ms - 250ms:</strong> Average healthy young adult.</li>
-                        <li style={{ marginBottom: '15px' }}><strong>250ms - 350ms:</strong> Standard baseline. Common for office environments and daily multitasking.</li>
-                        <li style={{ marginBottom: '15px' }}><strong>350ms+:</strong> May indicate high fatigue, heavy input lag, or significant distraction.</li>
-                    </ul>
-
-                    <h3 style={{ color: '#fff', marginTop: '50px', fontSize: '1.5rem' }}>100% Client-Side Integrity</h3>
-                    <p>
-                        At <strong>SHB ToolBox</strong>, we ensure our tests are unbiased. Our Reaction Test executes its timing 
-                        loop using the <code>Date.now()</code> high-resolution timestamp directly in your browser. This 
-                        removes any "Network Ping" or server-side delay from your result. Your scores are stored only in your 
-                        browser's <strong>LocalStorage</strong>, ensuring that your cognitive data stays private and secure.
-                    </p>
-                </div>
-            </div>
-        </ToolboxLayout>
+      <ToolboxLayout title="Reaction Time Test" description="Loading reaction test.">
+        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
+          Calibrating reaction timer...
+        </div>
+      </ToolboxLayout>
     );
+  }
+
+  return (
+    <ToolboxLayout
+      title="Reaction Time Test - Visual Speed Benchmark in Milliseconds"
+      description="Test your visual reaction time in milliseconds with single, 5-round and 10-round modes. Track average, best, median, consistency, false starts and personal best locally."
+    >
+      <div style={pageWrap}>
+        {notification && (
+          <div style={toast}>
+            {notification}
+          </div>
+        )}
+
+        <section style={hero}>
+          <p style={eyebrow}>Free visual reaction speed benchmark</p>
+          <h1 style={heroTitle}>Reaction Time Test</h1>
+          <p style={heroText}>
+            Measure how quickly you respond to a visual signal. Use single test mode for a quick check or multi-round
+            challenge mode for a more reliable average. Results are calculated in milliseconds using browser timing.
+          </p>
+        </section>
+
+        <section style={appGrid}>
+          <main style={testPanel}>
+            <div style={modeGrid}>
+              {Object.entries(MODES).map(([key, item]) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    setMode(key);
+                    resetCurrentTest();
+                  }}
+                  style={mode === key ? activeModeBtn : modeBtn}
+                >
+                  <strong>{item.label}</strong>
+                  <span>{item.desc}</span>
+                </button>
+              ))}
+            </div>
+
+            <button
+              onPointerDown={handleAction}
+              style={{
+                ...testArea,
+                background: getAreaBackground(gameState, goColor),
+                borderColor: gameState === 'idle' || gameState === 'finished' ? '#334155' : getAreaBackground(gameState, goColor)
+              }}
+            >
+              <div style={roundPill}>
+                {gameState === 'idle' || gameState === 'finished' || gameState === 'early'
+                  ? `${MODES[mode].label}`
+                  : `Round ${roundIndex} of ${targetRounds}`}
+              </div>
+
+              {gameState === 'idle' && (
+                <>
+                  <span style={mainPrompt}>Tap to Start</span>
+                  <span style={subPrompt}>Wait for green, then click as fast as possible.</span>
+                </>
+              )}
+
+              {gameState === 'waiting' && (
+                <>
+                  <span style={mainPrompt}>Wait...</span>
+                  <span style={subPrompt}>Do not click yet. Green means GO.</span>
+                </>
+              )}
+
+              {gameState === 'go' && (
+                <>
+                  <span style={goPrompt}>CLICK!</span>
+                  <span style={subPrompt}>React now.</span>
+                </>
+              )}
+
+              {gameState === 'between' && (
+                <>
+                  <span style={resultPrompt}>{currentResult?.label}</span>
+                  <span style={subPrompt}>Tap to continue to the next round.</span>
+                </>
+              )}
+
+              {gameState === 'early' && (
+                <>
+                  <span style={{ ...resultPrompt, color: '#fecaca' }}>Too Soon</span>
+                  <span style={subPrompt}>Tap to restart the test.</span>
+                </>
+              )}
+
+              {gameState === 'finished' && (
+                <>
+                  <span style={resultPrompt}>{stats.average ? `${stats.average} ms avg` : 'Finished'}</span>
+                  <span style={subPrompt}>Tap to start again.</span>
+                </>
+              )}
+            </button>
+
+            <div style={quickActions}>
+              <button onClick={startTest} style={primaryBtn}>Start New Test</button>
+              <button onClick={resetCurrentTest} style={secondaryBtn}>Reset Current Test</button>
+            </div>
+
+            <section style={statsGrid}>
+              <Stat label="Average" value={stats.average ? `${stats.average} ms` : '--'} />
+              <Stat label="Best Round" value={stats.best ? `${stats.best} ms` : '--'} />
+              <Stat label="Median" value={stats.median ? `${stats.median} ms` : '--'} />
+              <Stat label="Worst Round" value={stats.worst ? `${stats.worst} ms` : '--'} />
+              <Stat label="Consistency" value={stats.consistency ? `${stats.consistency}%` : '--'} />
+              <Stat label="False Starts" value={falseStarts} />
+            </section>
+
+            <section style={scoreCard}>
+              <div>
+                <h2 style={sectionTitle}>Performance Tier</h2>
+                <p style={tierText}>{tier.label}</p>
+                <p style={sectionText}>{tier.desc}</p>
+              </div>
+              <div style={{ ...tierBadge, color: tier.color, borderColor: tier.color }}>
+                {stats.average ? `${stats.average} ms` : 'No score'}
+              </div>
+            </section>
+
+            {rounds.length > 0 && (
+              <section style={roundsCard}>
+                <h2 style={sectionTitle}>Current Round Results</h2>
+                <div style={roundList}>
+                  {rounds.map((time, index) => (
+                    <div key={`${time}-${index}`} style={roundItem}>
+                      <span>Round {index + 1}</span>
+                      <strong>{time} ms</strong>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </main>
+
+          <aside style={sidePanel}>
+            <h2 style={sideTitle}>Settings & Records</h2>
+
+            <label style={fieldWrap}>
+              <span style={fieldLabel}>GO color</span>
+              <input
+                type="color"
+                value={goColor}
+                onChange={event => setGoColor(event.target.value)}
+                style={colorInput}
+              />
+            </label>
+
+            <div style={recordBox}>
+              <span>Personal Best</span>
+              <strong>{personalBest ? `${personalBest} ms` : '--'}</strong>
+            </div>
+
+            <div style={recordBox}>
+              <span>Completed Tests</span>
+              <strong>{history.length}</strong>
+            </div>
+
+            <button onClick={clearSavedData} style={dangerBtn}>Clear Saved Data</button>
+
+            <div style={tipBox}>
+              <h3>How to test properly</h3>
+              <p>
+                Keep your finger or mouse ready, look at the center, and avoid guessing. Multi-round mode gives a better
+                benchmark than one lucky attempt.
+              </p>
+            </div>
+
+            <div style={historyBox}>
+              <h3>Recent Tests</h3>
+              {history.length === 0 ? (
+                <p style={emptyText}>No completed tests yet.</p>
+              ) : (
+                history.slice(0, 8).map(item => (
+                  <div key={item.id} style={historyItem}>
+                    <span>{MODES[item.mode]?.label || 'Test'}</span>
+                    <strong>{item.average} ms avg</strong>
+                    <small>Best {item.best} ms</small>
+                  </div>
+                ))
+              )}
+            </div>
+          </aside>
+        </section>
+
+        <section style={contentSection}>
+          <h2>What is a reaction time test?</h2>
+          <p>
+            A reaction time test measures how quickly you respond after seeing a stimulus. In this test, the screen changes
+            color after a random delay. Your result is the time between the visual change and your click or tap, measured in
+            milliseconds. Lower scores mean faster visual reaction speed.
+          </p>
+
+          <div style={seoGrid}>
+            <div style={seoCard}>
+              <h3>Visual reaction time test</h3>
+              <p>
+                This tool focuses on visual reaction time, which means you respond to a visual signal. It is useful for gamers,
+                athletes, drivers, students and anyone who wants to check alertness or response speed.
+              </p>
+            </div>
+
+            <div style={seoCard}>
+              <h3>Single vs multi-round testing</h3>
+              <p>
+                A single score can be affected by luck, distraction or early clicking. A 5-round or 10-round average gives a
+                more reliable reaction benchmark.
+              </p>
+            </div>
+
+            <div style={seoCard}>
+              <h3>Average, best and median</h3>
+              <p>
+                The average shows overall performance, the best round shows peak speed, and the median helps reduce the effect
+                of one unusually slow or fast click.
+              </p>
+            </div>
+
+            <div style={seoCard}>
+              <h3>False-start tracking</h3>
+              <p>
+                Clicking before the green screen is counted as a false start. This helps separate real reaction speed from
+                guessing.
+              </p>
+            </div>
+
+            <div style={seoCard}>
+              <h3>Hardware affects results</h3>
+              <p>
+                Display refresh rate, mouse latency, touchscreen delay, browser performance and device speed can all influence
+                measured reaction time.
+              </p>
+            </div>
+
+            <div style={seoCard}>
+              <h3>Private local history</h3>
+              <p>
+                Your personal best and recent test history are saved in your browser only. The tool does not need an account or
+                server-side profile.
+              </p>
+            </div>
+          </div>
+
+          <h2>Reaction time benchmark guide</h2>
+          <ul style={tipList}>
+            <li><strong>Under 150 ms:</strong> extremely fast and often influenced by high-end hardware or anticipation.</li>
+            <li><strong>150–200 ms:</strong> excellent visual reaction speed.</li>
+            <li><strong>200–250 ms:</strong> strong to average range for many users.</li>
+            <li><strong>250–350 ms:</strong> normal range, often affected by fatigue, device latency or distraction.</li>
+            <li><strong>350 ms and above:</strong> may indicate distraction, slow hardware, tiredness or delayed input.</li>
+          </ul>
+
+          <h2>Tips to improve reaction test accuracy</h2>
+          <p>
+            Use the same device when comparing results, close heavy background apps, avoid testing while tired, keep your hand
+            in the same position and complete multiple rounds. Multi-round averages are more useful than a single best score.
+          </p>
+        </section>
+
+        <section style={faqSection}>
+          <h2>Reaction Time Test FAQ</h2>
+
+          <div style={faqGrid}>
+            <div style={faqItem}>
+              <h3>What is a good reaction time?</h3>
+              <p>Many users fall around 200–300 ms depending on device, age, alertness and hardware. Lower is faster.</p>
+            </div>
+
+            <div style={faqItem}>
+              <h3>Why did I get “Too Soon”?</h3>
+              <p>You clicked before the screen turned green. That is counted as a false start because it is guessing, not reacting.</p>
+            </div>
+
+            <div style={faqItem}>
+              <h3>Is a 10-round test better?</h3>
+              <p>Yes. More rounds reduce the effect of lucky clicks and give a more reliable average.</p>
+            </div>
+
+            <div style={faqItem}>
+              <h3>Does hardware affect reaction time?</h3>
+              <p>Yes. Monitor refresh rate, mouse or touchscreen latency, browser speed and device performance can affect your score.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </ToolboxLayout>
+  );
 }
 
-// Styling Constants
-const lCap = { fontSize: '0.75rem', color: '#64748b', fontWeight: 'bold', display: 'block', textTransform: 'uppercase' };
-const statItem = { background: '#0f172a', padding: '20px', borderRadius: '15px', border: '1px solid #334155' };
+function Stat({ label, value }) {
+  return (
+    <div style={statItem}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function calculateStats(values) {
+  if (!values || values.length === 0) {
+    return {
+      average: null,
+      best: null,
+      worst: null,
+      median: null,
+      consistency: null
+    };
+  }
+
+  const sorted = [...values].sort((a, b) => a - b);
+  const sum = values.reduce((acc, value) => acc + value, 0);
+  const average = Math.round(sum / values.length);
+  const best = sorted[0];
+  const worst = sorted[sorted.length - 1];
+  const middle = Math.floor(sorted.length / 2);
+  const median = sorted.length % 2 === 0
+    ? Math.round((sorted[middle - 1] + sorted[middle]) / 2)
+    : sorted[middle];
+
+  const variance = values.reduce((acc, value) => acc + Math.pow(value - average, 2), 0) / values.length;
+  const standardDeviation = Math.sqrt(variance);
+  const consistency = Math.max(0, Math.round(100 - (standardDeviation / average) * 100));
+
+  return { average, best, worst, median, consistency };
+}
+
+function getPerformanceTier(average) {
+  if (!average) {
+    return {
+      label: 'Complete a test to see your tier',
+      desc: 'Your tier will appear after your first completed test.',
+      color: '#64748b'
+    };
+  }
+
+  if (average < 150) {
+    return {
+      label: 'Elite Reflex',
+      desc: 'Extremely fast. Repeat the test to make sure it was not anticipation.',
+      color: '#38bdf8'
+    };
+  }
+
+  if (average < 200) {
+    return {
+      label: 'Excellent',
+      desc: 'Very fast visual response speed.',
+      color: '#34d399'
+    };
+  }
+
+  if (average < 250) {
+    return {
+      label: 'Strong',
+      desc: 'A strong reaction speed range for many users.',
+      color: '#a3e635'
+    };
+  }
+
+  if (average < 350) {
+    return {
+      label: 'Normal',
+      desc: 'A common range that may improve with focus, rest and lower input lag.',
+      color: '#fbbf24'
+    };
+  }
+
+  return {
+    label: 'Slow / Distracted',
+    desc: 'Try again when focused, rested, and using a responsive device.',
+    color: '#f87171'
+  };
+}
+
+function getAreaBackground(state, goColor) {
+  if (state === 'waiting') return '#ef4444';
+  if (state === 'go') return goColor;
+  if (state === 'early') return '#7f1d1d';
+  if (state === 'between') return '#0f172a';
+  if (state === 'finished') return '#0f172a';
+  return '#0f172a';
+}
+
+function secureRandomDelay(min, max) {
+  const range = max - min;
+  let random = Math.random();
+
+  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+    const buffer = new Uint32Array(1);
+    window.crypto.getRandomValues(buffer);
+    random = buffer[0] / 4294967295;
+  }
+
+  return Math.floor(min + random * range);
+}
+
+const pageWrap = { maxWidth: '1180px', margin: '0 auto', padding: '45px 20px 90px' };
+const toast = { position: 'fixed', top: '84px', right: '20px', background: '#38bdf8', color: '#0f172a', padding: '12px 22px', borderRadius: '12px', fontWeight: 900, zIndex: 1000, boxShadow: '0 8px 25px rgba(0,0,0,0.3)' };
+
+const hero = { textAlign: 'center', marginBottom: '42px' };
+const eyebrow = { color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 900, fontSize: '0.78rem', marginBottom: '12px' };
+const heroTitle = { color: '#fff', fontSize: 'clamp(2.2rem, 5vw, 3.6rem)', lineHeight: 1.05, margin: '0 0 16px', fontWeight: 950 };
+const heroText = { color: '#cbd5e1', fontSize: '1.08rem', maxWidth: '920px', margin: '0 auto', lineHeight: 1.75 };
+
+const appGrid = { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: '24px', alignItems: 'start' };
+const testPanel = { display: 'grid', gap: '20px' };
+const sidePanel = { background: '#1e293b', border: '1px solid #334155', borderRadius: '28px', padding: '24px', position: 'sticky', top: '92px', display: 'grid', gap: '18px' };
+
+const modeGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '12px' };
+const modeBtn = { background: '#1e293b', color: '#cbd5e1', border: '1px solid #334155', borderRadius: '18px', padding: '16px', display: 'grid', gap: '7px', textAlign: 'left', cursor: 'pointer' };
+const activeModeBtn = { ...modeBtn, background: 'rgba(56,189,248,0.12)', border: '1px solid #38bdf8' };
+
+const testArea = {
+  minHeight: '390px',
+  borderRadius: '30px',
+  borderWidth: '3px',
+  borderStyle: 'dashed',
+  color: '#fff',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '14px',
+  cursor: 'pointer',
+  userSelect: 'none',
+  textAlign: 'center',
+  boxShadow: 'inset 0 0 30px rgba(0,0,0,0.45), 0 16px 40px rgba(0,0,0,0.18)',
+  transition: 'background 0.08s ease, border-color 0.08s ease',
+  touchAction: 'manipulation',
+  padding: '24px'
+};
+
+const roundPill = { background: 'rgba(15,23,42,0.75)', border: '1px solid rgba(255,255,255,0.16)', color: '#cbd5e1', borderRadius: '999px', padding: '8px 13px', fontSize: '0.78rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' };
+const mainPrompt = { fontSize: 'clamp(2rem, 6vw, 4rem)', fontWeight: 950, lineHeight: 1 };
+const goPrompt = { fontSize: 'clamp(3rem, 9vw, 6rem)', fontWeight: 950, lineHeight: 1 };
+const resultPrompt = { fontSize: 'clamp(2.5rem, 8vw, 5rem)', fontWeight: 950, lineHeight: 1, color: '#fff' };
+const subPrompt = { color: '#cbd5e1', fontSize: '1rem', lineHeight: 1.5 };
+
+const quickActions = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' };
+const primaryBtn = { background: '#38bdf8', color: '#082f49', border: 'none', borderRadius: '14px', padding: '15px', fontWeight: 950, cursor: 'pointer' };
+const secondaryBtn = { background: '#334155', color: '#fff', border: 'none', borderRadius: '14px', padding: '15px', fontWeight: 850, cursor: 'pointer' };
+const dangerBtn = { background: '#7f1d1d', color: '#fff', border: 'none', borderRadius: '14px', padding: '13px 15px', fontWeight: 850, cursor: 'pointer' };
+
+const statsGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' };
+const statItem = { background: '#1e293b', border: '1px solid #334155', borderRadius: '18px', padding: '16px', display: 'grid', gap: '8px', color: '#94a3b8' };
+
+const scoreCard = { background: '#1e293b', border: '1px solid #334155', borderRadius: '24px', padding: '22px', display: 'flex', justifyContent: 'space-between', gap: '18px', alignItems: 'center' };
+const sectionTitle = { color: '#fff', margin: '0 0 8px', fontSize: '1.25rem' };
+const sectionText = { color: '#94a3b8', lineHeight: 1.65, margin: 0 };
+const tierText = { color: '#38bdf8', fontWeight: 950, fontSize: '1.2rem', margin: '0 0 8px' };
+const tierBadge = { border: '1px solid #334155', borderRadius: '999px', padding: '12px 16px', fontWeight: 950, whiteSpace: 'nowrap' };
+
+const roundsCard = { background: '#1e293b', border: '1px solid #334155', borderRadius: '24px', padding: '22px' };
+const roundList = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' };
+const roundItem = { background: '#0f172a', border: '1px solid #334155', borderRadius: '14px', padding: '12px', display: 'grid', gap: '5px', color: '#94a3b8' };
+
+const sideTitle = { color: '#fff', margin: 0, fontSize: '1.15rem' };
+const fieldWrap = { display: 'grid', gap: '8px' };
+const fieldLabel = { color: '#94a3b8', fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em' };
+const colorInput = { width: '100%', height: '46px', background: '#0f172a', border: '1px solid #334155', borderRadius: '13px', padding: '6px', cursor: 'pointer' };
+const recordBox = { background: '#0f172a', border: '1px solid #334155', borderRadius: '16px', padding: '16px', display: 'flex', justifyContent: 'space-between', gap: '12px', color: '#94a3b8' };
+const tipBox = { background: '#0f172a', border: '1px solid #334155', borderRadius: '18px', padding: '18px', color: '#94a3b8', lineHeight: 1.65, fontSize: '0.9rem' };
+const historyBox = { display: 'grid', gap: '10px', color: '#cbd5e1' };
+const historyItem = { background: '#0f172a', border: '1px solid #334155', borderRadius: '14px', padding: '12px', display: 'grid', gap: '4px' };
+const emptyText = { color: '#64748b', fontStyle: 'italic', lineHeight: 1.6 };
+
+const contentSection = { marginTop: '78px', borderTop: '1px solid #334155', paddingTop: '55px', color: '#cbd5e1', lineHeight: 1.85 };
+const seoGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '18px', margin: '30px 0' };
+const seoCard = { background: '#1e293b', border: '1px solid #334155', borderRadius: '22px', padding: '22px' };
+const tipList = { paddingLeft: '20px', lineHeight: 1.9 };
+
+const faqSection = { marginTop: '70px', background: 'rgba(56,189,248,0.05)', border: '1px solid #334155', borderRadius: '26px', padding: '34px', color: '#cbd5e1', lineHeight: 1.8 };
+const faqGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '18px' };
+const faqItem = { background: 'rgba(15,23,42,0.7)', border: '1px solid #334155', borderRadius: '20px', padding: '22px' };
