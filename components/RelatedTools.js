@@ -7,7 +7,6 @@ const TOOL_GROUPS = {
     description: 'Useful calculators and business document tools.',
     tools: [
       { name: 'Tax Invoice Pro', href: '/invoicegenerator', desc: 'Create professional invoices with VAT, totals and PDF/print options.' },
-      { name: 'Advanced Invoice Engine', href: '/invoice-engine', desc: 'Structured invoice workspace for advanced billing needs.' },
       { name: 'EMI Calculator', href: '/emicalculator', desc: 'Calculate monthly loan payments and total interest.' },
       { name: 'SIP Calculator', href: '/sipcalculator', desc: 'Plan recurring investments and long-term wealth growth.' },
       { name: 'Percentage Calculator', href: '/percentagecalculator', desc: 'Calculate percentages, VAT, discounts, markup and margin.' },
@@ -85,7 +84,6 @@ const HIDDEN_PATHS = new Set([
 
 const EXTRA_RELATED = {
   '/invoicegenerator': ['/percentagecalculator', '/signaturemaker', '/pdftoimage', '/imagetopdf', '/tasklist'],
-  '/invoice-engine': ['/invoicegenerator', '/percentagecalculator', '/signaturemaker', '/pdftoimage', '/imagetopdf'],
   '/pdftoimage': ['/pdfeditor', '/imagetopdf', '/pdfmerge', '/pdfsplit', '/pdfcompressor', '/imagecompressor', '/imageresizer'],
   '/imagetopdf': ['/pdfeditor', '/pdftoimage', '/pdfmerge', '/pdfsplit', '/pdfcompressor', '/signaturemaker', '/passportphoto', '/imagecompressor', '/imageresizer'],
   '/pdfmerge': ['/pdfsplit', '/pdfcompressor', '/pdftoimage', '/imagetopdf', '/imagecompressor'],

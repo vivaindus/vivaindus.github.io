@@ -4,7 +4,6 @@ import ToolboxLayout, { toolGroups } from '../components/ToolboxLayout';
 
 const toolDetails = {
   '/invoicegenerator': 'Create clean UAE-ready invoices with item lines, totals, tax details, and printable output for small business billing.',
-  '/invoice-engine': 'Advanced invoice workspace for structured business documents, custom columns, precise rounding, and multi-page PDF generation.',
   '/emicalculator': 'Estimate monthly loan payments, total interest, repayment schedules, and compare practical repayment strategies.',
   '/sipcalculator': 'Plan monthly investments with compounding projections, long-term growth estimates, and easy-to-read summaries.',
   '/percentagecalculator': 'Calculate percentage change, discount, markup, margin, VAT-style additions, and commercial math faster.',
