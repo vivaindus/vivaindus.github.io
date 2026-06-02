@@ -667,16 +667,6 @@ const dataUrlToUint8Array = dataUrl => {
   const currentSize = pageSizes[selectedPage - 1];
   const currentAnnotations = annotations.filter(item => item.page === selectedPage);
 
-  if (!mounted) {
-    return (
-      <ToolboxLayout title="PDF Editor" description="Loading PDF editor.">
-        <div style={{ padding: '100px 20px', textAlign: 'center', color: '#94a3b8' }}>
-          Loading PDF editor...
-        </div>
-      </ToolboxLayout>
-    );
-  }
-
   return (
     <ToolboxLayout
       title="PDF Editor & Annotator - Add Text, Signature, Images and Page Numbers"
