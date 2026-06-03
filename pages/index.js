@@ -234,6 +234,16 @@ export default function Home() {
               </p>
               <span style={guideCta}>Read guide →</span>
             </Link>
+
+            <Link href="/guides/how-to-resize-image-for-online-forms" style={guideCard}>
+              <span style={guideTag}>Image Tools</span>
+              <h3 style={guideTitle}>How to Resize Images for Online Forms</h3>
+              <p style={guideDesc}>
+                Learn how to resize, crop, compress, and convert images for applications, portals, websites,
+                passport photos, product photos, and document uploads.
+              </p>
+              <span style={guideCta}>Read guide →</span>
+            </Link>
           </div>
         </section>
       </main>
