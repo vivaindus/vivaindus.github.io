@@ -224,6 +224,16 @@ export default function Home() {
               </p>
               <span style={guideCta}>Read guide →</span>
             </Link>
+
+            <Link href="/guides/how-to-edit-and-sign-pdf-online" style={guideCard}>
+              <span style={guideTag}>PDF Editing</span>
+              <h3 style={guideTitle}>How to Edit and Sign a PDF Online</h3>
+              <p style={guideDesc}>
+                Learn how to add text, signatures, stamps, images, highlights, boxes, page numbers, headers, footers,
+                and metadata to PDF files safely.
+              </p>
+              <span style={guideCta}>Read guide →</span>
+            </Link>
           </div>
         </section>
       </main>
