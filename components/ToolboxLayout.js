@@ -61,17 +61,26 @@ export const toolGroups = {
 export default function ToolboxLayout({ children, title, description }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const router = useRouter();
-    const cleanPath = router.asPath.split('?')[0].split('#')[0];
+
+    let cleanPath = router.asPath.split('?')[0].split('#')[0];
+
+    if (cleanPath !== '/' && cleanPath.endsWith('/')) {
+        cleanPath = cleanPath.slice(0, -1);
+    }
+
     const canonicalUrl = cleanPath === '/'
         ? 'https://www.shbstores.com/'
         : `https://www.shbstores.com${cleanPath}`;
 
+    const pageTitle = title ? `${title} | SHB ToolBox` : 'SHB ToolBox';
+    const pageDescription = description || 'Free browser-based tools for business, PDF, images, text, finance, productivity, and everyday calculations.';
+
     return (
         <div style={{ backgroundColor: '#0f172a', minHeight: '100vh', color: '#fff', fontFamily: 'Inter, system-ui, sans-serif' }}>
             <Head>
-                <title>{title} | SHB ToolBox</title>
-<meta name="description" content={description} />
-<link rel="canonical" href={canonicalUrl} />
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
+    <link rel="canonical" href={canonicalUrl} />
                 {/* AdSense will be injected here via _document.js or _app.js as we fixed before */}
             </Head>
 
