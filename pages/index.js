@@ -214,6 +214,16 @@ export default function Home() {
               </p>
               <span style={guideCta}>Read guide →</span>
             </Link>
+
+            <Link href="/guides/how-to-compress-pdf-without-losing-quality" style={guideCard}>
+              <span style={guideTag}>PDF Tools</span>
+              <h3 style={guideTitle}>How to Compress PDF Without Losing Quality</h3>
+              <p style={guideDesc}>
+                Learn why PDFs become large, how to choose the right compression level, and how to keep scanned
+                pages, signatures, stamps, tables, and small text readable.
+              </p>
+              <span style={guideCta}>Read guide →</span>
+            </Link>
           </div>
         </section>
       </main>
