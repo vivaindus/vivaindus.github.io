@@ -165,7 +165,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section style={faqSection}>
+                <section style={faqSection}>
           <div style={sectionHead}>
             <p style={eyebrow}>Questions</p>
             <h2 style={sectionTitle}>Frequently asked questions</h2>
@@ -176,18 +176,44 @@ export default function Home() {
               <h3 style={faqQ}>Is SHB ToolBox free?</h3>
               <p style={para}>Yes. The tools are available for free and can be used without creating an account.</p>
             </div>
+
             <div style={faqItem}>
               <h3 style={faqQ}>Do I need to install anything?</h3>
               <p style={para}>No. SHB ToolBox runs in your web browser, so you can open a tool page and start using it directly.</p>
             </div>
+
             <div style={faqItem}>
               <h3 style={faqQ}>Are my files uploaded to a server?</h3>
               <p style={para}>Many tools are designed to work locally in your browser. Always check the notes on each tool page for feature-specific details.</p>
             </div>
+
             <div style={faqItem}>
               <h3 style={faqQ}>Can I use these tools for business work?</h3>
               <p style={para}>Yes, but important financial, legal, tax, medical, or compliance outputs should be reviewed with a qualified professional.</p>
             </div>
+          </div>
+        </section>
+
+        <section style={guidesSection}>
+          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+            <p style={eyebrow}>Learn with SHB ToolBox</p>
+            <h2 style={sectionTitle}>Helpful Guides</h2>
+            <p style={sectionText}>
+              Practical guides that explain how to use online tools for business documents, PDF work, image editing,
+              content writing, and everyday calculations.
+            </p>
+          </div>
+
+          <div style={guideGrid}>
+            <Link href="/guides/how-to-create-uae-tax-invoice" style={guideCard}>
+              <span style={guideTag}>Business & VAT</span>
+              <h3 style={guideTitle}>How to Create a UAE Tax Invoice Online</h3>
+              <p style={guideDesc}>
+                Learn what to include in a UAE invoice, how VAT and TRN details work, common invoice mistakes,
+                and how to create a printable tax invoice online.
+              </p>
+              <span style={guideCta}>Read guide →</span>
+            </Link>
           </div>
         </section>
       </main>
@@ -254,3 +280,62 @@ const faqSection = { marginTop: '80px' };
 const faqGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' };
 const faqItem = { background: '#1e293b', border: '1px solid #334155', borderRadius: '20px', padding: '24px' };
 const faqQ = { color: '#fff', fontSize: '1rem', margin: '0 0 10px' };
+const guidesSection = {
+  marginTop: '80px',
+  padding: '50px 30px',
+  background: '#1e293b',
+  border: '1px solid #334155',
+  borderRadius: '28px'
+};
+
+const sectionText = {
+  color: '#94a3b8',
+  maxWidth: '780px',
+  margin: '0 auto',
+  lineHeight: 1.7
+};
+
+const guideGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+  gap: '20px'
+};
+
+const guideCard = {
+  display: 'block',
+  background: '#0f172a',
+  border: '1px solid #334155',
+  borderRadius: '20px',
+  padding: '24px',
+  textDecoration: 'none',
+  transition: '0.2s'
+};
+
+const guideTag = {
+  display: 'inline-block',
+  color: '#0f172a',
+  background: '#38bdf8',
+  padding: '5px 10px',
+  borderRadius: '999px',
+  fontSize: '0.72rem',
+  fontWeight: 900,
+  marginBottom: '14px'
+};
+
+const guideTitle = {
+  color: '#fff',
+  fontSize: '1.25rem',
+  margin: '0 0 10px'
+};
+
+const guideDesc = {
+  color: '#94a3b8',
+  lineHeight: 1.7,
+  fontSize: '0.95rem'
+};
+
+const guideCta = {
+  color: '#38bdf8',
+  fontWeight: 900,
+  fontSize: '0.9rem'
+};
