@@ -372,12 +372,13 @@ export default function InvoiceGenerator() {
 
   return (
     <>
-      <Head>
+            <Head>
         <title>Free Invoice Generator - UAE VAT Invoice Maker | SHB ToolBox</title>
         <meta
           name="description"
           content="Create professional invoices online with SHB ToolBox. Free invoice generator with UAE VAT fields, TRN, logo, signature, discounts, shipping, payment status, QR code, browser draft saving and print PDF."
         />
+        <link rel="canonical" href="https://www.shbstores.com/invoicegenerator" />
       </Head>
 
       <style>{getPrintStyles(invoice)}</style>
