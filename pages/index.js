@@ -244,6 +244,16 @@ export default function Home() {
               </p>
               <span style={guideCta}>Read guide →</span>
             </Link>
+
+            <Link href="/guides/word-count-guide" style={guideCard}>
+              <span style={guideTag}>Writing Tools</span>
+              <h3 style={guideTitle}>Word Count Guide for Articles, Essays and Social Media</h3>
+              <p style={guideDesc}>
+                Learn how word count, character count, reading time, paragraph structure, and sentence length affect
+                essays, articles, captions, SEO content, and business writing.
+              </p>
+              <span style={guideCta}>Read guide →</span>
+            </Link>
           </div>
         </section>
       </main>
