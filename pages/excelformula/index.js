@@ -6,6 +6,53 @@ import { buildDetailedExplanation } from '../../lib/excelFormulaExplainer';
 
 const sampleFormula = '=IF(AND(A2<>"",B2>0),VLOOKUP(A2,Sheet2!$A$2:$D$100,4,FALSE),"Not Found")';
 
+
+function extractCleanExcelReferences(formula) {
+  const source = String(formula || '');
+
+  const protectedRanges = [];
+  const foundRanges = [];
+  const foundCells = [];
+
+  const addRange = (value, start, end) => {
+    if (!foundRanges.includes(value)) foundRanges.push(value);
+    protectedRanges.push({ start, end });
+  };
+
+  // Full sheet ranges, for example Sheet2!$A$2:$D$100 or 'Sales Sheet'!A1:D10
+  const sheetRangePattern = /(?:'[^']+'|[A-Za-z_][A-Za-z0-9_ ]*)!\$?[A-Z]{1,3}\$?\d+:\$?[A-Z]{1,3}\$?\d+/g;
+
+  // Normal ranges, for example $A$2:$D$100 or A1:D10
+  const rangePattern = /\$?[A-Z]{1,3}\$?\d+:\$?[A-Z]{1,3}\$?\d+/g;
+
+  // Cell references, but not when preceded by letters/numbers/_/!
+  // This prevents Sheet2 becoming EET2.
+  const cellPattern = /(?<![A-Za-z0-9_!])\$?[A-Z]{1,3}\$?\d+\b/g;
+
+  let match;
+
+  while ((match = sheetRangePattern.exec(source)) !== null) {
+    addRange(match[0], match.index, match.index + match[0].length);
+  }
+
+  while ((match = rangePattern.exec(source)) !== null) {
+    const insideExistingRange = protectedRanges.some(part => match.index >= part.start && match.index < part.end);
+    if (!insideExistingRange) {
+      addRange(match[0], match.index, match.index + match[0].length);
+    }
+  }
+
+  while ((match = cellPattern.exec(source)) !== null) {
+    const insideRange = protectedRanges.some(part => match.index >= part.start && match.index < part.end);
+    if (!insideRange && !foundCells.includes(match[0])) {
+      foundCells.push(match[0]);
+    }
+  }
+
+  return [...foundRanges, ...foundCells];
+}
+
+
 export default function ExcelFormulaTool() {
   const [formula, setFormula] = useState(sampleFormula);
   const [indentSize, setIndentSize] = useState(4);
@@ -118,7 +165,7 @@ export default function ExcelFormulaTool() {
 
             <div style={walkCard}>
               <h3>References found</h3>
-              <p>{analysis.references.length ? analysis.references.join(', ') : 'No cell references detected.'}</p>
+              <p>{extractCleanExcelReferences(formula).length ? extractCleanExcelReferences(formula).join(', ') : 'No cell references detected.'}</p>
             </div>
 
             <div style={walkCard}>

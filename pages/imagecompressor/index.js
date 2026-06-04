@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ToolboxLayout from '../../components/ToolboxLayout';
 import imageCompression from 'browser-image-compression';
-import RelatedTools from '../../components/RelatedTools';
 
 const outputFormats = {
   original: { label: 'Keep original format', fileType: undefined, extension: null },
@@ -389,10 +388,6 @@ export default function ImageCompressor() {
             </div>
           </aside>
         </section>
-
-        
-        <RelatedTools currentPath="/imagecompressor" />
-
 <section style={contentSection}>
           <h2 style={contentTitle}>What does image compression do?</h2>
           <p style={para}>
