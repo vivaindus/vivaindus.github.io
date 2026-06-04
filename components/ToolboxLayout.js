@@ -34,6 +34,7 @@ export const toolGroups = {
             { name: 'Favicon Gen', desc: 'Web & App icon package.', href: '/favicongen' },
             { name: 'YT Thumbnails', desc: 'Extract 4K video covers.', href: '/thumbnaildownloader' },
             { name: 'Bulk QR Studio', desc: 'Generate QR codes in ZIP.', href: '/qrcode' },
+            { name: 'Barcode Generator', desc: 'Create, download and print barcode labels.', href: '/barcodegenerator' },
         ]
     },
     text: {

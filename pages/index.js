@@ -3,6 +3,19 @@ import Link from 'next/link';
 import ToolboxLayout, { toolGroups } from '../components/ToolboxLayout';
 
 const toolDetails = {
+  '/barcodegenerator': 'Create professional barcode labels with Code 128, EAN, UPC, QR Code, CSV upload, label sizing, saved settings, PNG download, and direct print layouts.',
+  '/csvtoexcel': 'Convert CSV files into clean Excel XLSX workbooks with browser-based processing, table output, and downloadable spreadsheet files.',
+  '/csvtojson': 'Convert CSV data into JSON objects or arrays with delimiter detection, header handling, preview rows, copy output, and JSON download.',
+  '/textdiff': 'Compare two text blocks side by side, find added and removed lines, review changes, and copy clean comparison results.',
+  '/regextester': 'Test regular expressions against sample text, highlight matches, inspect capture groups, preview replacements, and debug regex patterns.',
+  '/jsonformatter': 'Format, validate, minify, copy, and download JSON data with clear error messages and readable structured output.',
+  '/xmlformatter': 'Format, validate, minify, copy, and download XML data with readable indentation and useful XML guidance.',
+  '/base64': 'Encode text to Base64 and decode Base64 back to readable text with URL-safe mode, copy output, and practical encoding guidance.',
+  '/urlencoder': 'Encode URLs, decode URL-encoded text, prepare query parameters, and understand URL component encoding for web and API work.',
+  '/jwtdecoder': 'Decode JSON Web Tokens, inspect headers and payloads, understand JWT claims, check expiry status, and review token data safely.',
+  '/uuidgenerator': 'Generate single or bulk UUID v4 and GUID values with uppercase, no-hyphen, copy, and TXT download options.',
+  '/codeformatter': 'Format SQL, JSON, HTML, CSS, JavaScript, Apps Script, VBA and other code snippets with readable output and copy/download options.',
+  '/excelformula': 'Format Excel formulas, detect functions, explain formula logic, show walkthroughs, and understand complex nested formulas step by step.',
   '/invoicegenerator': 'Create clean UAE-ready invoices with item lines, totals, tax details, discounts, signatures, printable PDF output, and browser draft saving.',
   '/emicalculator': 'Estimate monthly loan payments, total interest, repayment schedules, interest types, and practical repayment strategies.',
   '/sipcalculator': 'Plan monthly investments with compounding projections, long-term growth estimates, step-up SIP options, and easy-to-read summaries.',
@@ -33,6 +46,15 @@ const toolDetails = {
   '/agecalculator': 'Calculate exact age, time lived, next birthday countdown, date differences, and useful life milestone details.'
 };
 
+const featuredNewTools = [
+  { name: 'Barcode Generator', href: '/barcodegenerator', tag: 'Label Printing', desc: 'Create single or bulk barcode labels, upload CSV data, save printer settings, download PNG labels and print directly.' },
+  { name: 'Excel Formula Explainer', href: '/excelformula', tag: 'Spreadsheet Help', desc: 'Format and understand complex Excel formulas with detailed walkthroughs and function explanations.' },
+  { name: 'Code Formatter', href: '/codeformatter', tag: 'Developer Tool', desc: 'Format SQL, JSON, HTML, CSS, JavaScript, Apps Script, VBA and other code snippets.' },
+  { name: 'CSV to JSON', href: '/csvtojson', tag: 'Data Conversion', desc: 'Convert spreadsheet-style CSV data into clean JSON objects or arrays for APIs and development.' },
+  { name: 'Regex Tester', href: '/regextester', tag: 'Text Automation', desc: 'Test regular expressions, view matches, inspect capture groups and preview replacements.' },
+  { name: 'JWT Decoder', href: '/jwtdecoder', tag: 'API Debugging', desc: 'Decode JWT header and payload data, inspect claims and check token expiry status.' }
+];
+
 export default function Home() {
   const [expandedTool, setExpandedTool] = useState(null);
 
@@ -49,8 +71,8 @@ export default function Home() {
           </h1>
           <p style={heroText}>
             SHB ToolBox brings together fast, privacy-first utilities that work directly in your browser.
-            Use calculators, invoice tools, image tools, PDF converters, QR generators, text tools,
-            and productivity helpers without installing software or creating an account.
+            Use calculators, invoice tools, image tools, PDF converters, QR and barcode generators, developer tools,
+            spreadsheet helpers, text utilities, and productivity tools without installing software or creating an account.
           </p>
 
           <div style={heroActions}>
@@ -59,7 +81,7 @@ export default function Home() {
           </div>
 
           <div style={trustGrid}>
-            <div style={trustItem}><strong>20+ Tools</strong><span>Organized by workflow</span></div>
+            <div style={trustItem}><strong>50+ Tools</strong><span>Organized by workflow</span></div>
             <div style={trustItem}><strong>Client-Side First</strong><span>Designed for privacy</span></div>
             <div style={trustItem}><strong>No Login Required</strong><span>Open and use instantly</span></div>
           </div>
@@ -93,6 +115,28 @@ export default function Home() {
               This is especially useful for users handling business documents, personal photos, draft content, invoice
               details, or private calculations. You stay in control of what you enter and what you download.
             </p>
+          </div>
+        </section>
+
+        <section style={featuredSection}>
+          <div style={sectionHead}>
+            <p style={eyebrow}>New and popular tools</p>
+            <h2 style={sectionTitle}>Smart tools for business, data and development work</h2>
+            <p style={sectionDesc}>
+              These recently added tools are designed for practical daily workflows: barcode label printing, spreadsheet
+              formula explanation, data conversion, API debugging, code formatting, and text automation.
+            </p>
+          </div>
+
+          <div style={featuredGrid}>
+            {featuredNewTools.map(tool => (
+              <Link key={tool.href} href={tool.href} style={featuredCard}>
+                <span style={featuredTag}>{tool.tag}</span>
+                <h3 style={featuredTitle}>{tool.name}</h3>
+                <p style={featuredDesc}>{tool.desc}</p>
+                <span style={featuredCta}>Open tool →</span>
+              </Link>
+            ))}
           </div>
         </section>
 
@@ -161,6 +205,10 @@ export default function Home() {
             <div style={smallCard}>
               <h3 style={smallTitle}>Design and content users</h3>
               <p style={para}>Compress images, resize visuals, convert images to PDFs, extract PDF pages, and prepare web icons.</p>
+            </div>
+            <div style={smallCard}>
+              <h3 style={smallTitle}>Developers and data users</h3>
+              <p style={para}>Format code, decode JWTs, generate UUIDs, test regex patterns, convert CSV files, and prepare barcode labels.</p>
             </div>
           </div>
         </section>
@@ -254,6 +302,106 @@ export default function Home() {
               </p>
               <span style={guideCta}>Read guide →</span>
             </Link>
+
+            <Link href="/guides/how-to-create-and-print-barcode-labels-online" style={guideCard}>
+              <span style={guideTag}>Barcode Labels</span>
+              <h3 style={guideTitle}>How to Create and Print Barcode Labels Online</h3>
+              <p style={guideDesc}>
+                Learn how to choose barcode types, prepare label data, upload CSV files, set label size,
+                print barcode sheets, and avoid barcode printing mistakes.
+              </p>
+              <span style={guideCta}>Read guide →</span>
+            </Link>
+
+            <Link href="/guides/how-to-convert-csv-to-excel-and-json" style={guideCard}>
+              <span style={guideTag}>Data Conversion</span>
+              <h3 style={guideTitle}>How to Convert CSV to Excel and JSON Online</h3>
+              <p style={guideDesc}>
+                Learn when to convert CSV to Excel, when to convert CSV to JSON, how headers and delimiters work,
+                and how to fix common CSV issues.
+              </p>
+              <span style={guideCta}>Read guide →</span>
+            </Link>
+
+            <Link href="/guides/how-to-format-and-explain-excel-formulas" style={guideCard}>
+              <span style={guideTag}>Excel Formulas</span>
+              <h3 style={guideTitle}>How to Format and Explain Excel Formulas</h3>
+              <p style={guideDesc}>
+                Learn how to read nested Excel formulas, understand IF, IFERROR, lookups, INDIRECT, dynamic ranges,
+                and troubleshoot formula errors.
+              </p>
+              <span style={guideCta}>Read guide →</span>
+            </Link>
+
+            <Link href="/guides/how-to-format-json-xml-and-code-online" style={guideCard}>
+              <span style={guideTag}>Code Formatting</span>
+              <h3 style={guideTitle}>How to Format JSON, XML and Code Online</h3>
+              <p style={guideDesc}>
+                Learn how to format JSON, XML, SQL, HTML, CSS, JavaScript, Apps Script and other snippets
+                for easier debugging and sharing.
+              </p>
+              <span style={guideCta}>Read guide →</span>
+            </Link>
+
+            <Link href="/guides/developer-tools-guide-jwt-uuid-base64-url-regex" style={guideCard}>
+              <span style={guideTag}>Developer Tools</span>
+              <h3 style={guideTitle}>Developer Tools Guide: JWT, UUID, Base64, URL Encoding and Regex</h3>
+              <p style={guideDesc}>
+                Learn how JWT decoders, UUID generators, Base64 tools, URL encoders and regex testers help with
+                API debugging, development, and automation.
+              </p>
+              <span style={guideCta}>Read guide →</span>
+            </Link>
+
+            <Link href="/guides/how-to-generate-qr-codes-for-business" style={guideCard}>
+              <span style={guideTag}>QR Codes</span>
+              <h3 style={guideTitle}>How to Generate QR Codes for Business</h3>
+              <p style={guideDesc}>
+                Learn how to create QR codes for websites, WhatsApp, WiFi, contact details, documents,
+                product packaging and marketing materials.
+              </p>
+              <span style={guideCta}>Read guide →</span>
+            </Link>
+
+            <Link href="/guides/how-to-resize-and-compress-images-for-websites" style={guideCard}>
+              <span style={guideTag}>Image Optimization</span>
+              <h3 style={guideTitle}>How to Resize and Compress Images for Websites and Online Forms</h3>
+              <p style={guideDesc}>
+                Learn when to resize images, when to compress them, how to keep quality, and how to prepare
+                images for websites, forms and ecommerce.
+              </p>
+              <span style={guideCta}>Read guide →</span>
+            </Link>
+
+            <Link href="/guides/how-to-merge-split-and-compress-pdf-files-online" style={guideCard}>
+              <span style={guideTag}>PDF Workflow</span>
+              <h3 style={guideTitle}>How to Merge, Split and Compress PDF Files Online</h3>
+              <p style={guideDesc}>
+                Learn how to combine PDF files, extract selected pages, reduce file size and prepare documents
+                for email, forms and business sharing.
+              </p>
+              <span style={guideCta}>Read guide →</span>
+            </Link>
+
+            <Link href="/guides/how-to-create-strong-passwords-online" style={guideCard}>
+              <span style={guideTag}>Security</span>
+              <h3 style={guideTitle}>How to Create Strong Passwords Online</h3>
+              <p style={guideDesc}>
+                Learn how to create stronger passwords, use passphrases, avoid weak password habits and improve
+                basic account security.
+              </p>
+              <span style={guideCta}>Read guide →</span>
+            </Link>
+
+            <Link href="/guides/how-to-use-text-tools-for-writing-seo-and-cleanup" style={guideCard}>
+              <span style={guideTag}>Writing Tools</span>
+              <h3 style={guideTitle}>How to Use Text Tools for Writing, SEO and Content Cleanup</h3>
+              <p style={guideDesc}>
+                Learn how word counters, case converters and text comparison tools help with writing, SEO,
+                social media captions and cleanup tasks.
+              </p>
+              <span style={guideCta}>Read guide →</span>
+            </Link>
           </div>
         </section>
       </main>
@@ -264,8 +412,8 @@ export default function Home() {
 function getGroupDescription(groupKey) {
   const descriptions = {
     business: 'Finance, invoice, percentage, investment, repayment, and productivity tools for practical work.',
-    images: 'Image, PDF, favicon, thumbnail, and QR utilities for websites, documents, and content creation.',
-    text: 'Writing, formatting, password, counting, and conversion tools for daily digital tasks.',
+    images: 'Image, PDF, favicon, thumbnail, QR, and barcode utilities for websites, documents, labels, and content creation.',
+    text: 'Writing, formatting, code, data conversion, spreadsheet, encoding, and developer tools for daily digital tasks.',
     health: 'Simple calculators and speed tests for general awareness, timing, and personal reference.'
   };
 
@@ -288,6 +436,14 @@ const primaryBtn = { background: '#38bdf8', color: '#082f49', textDecoration: 'n
 const secondaryBtn = { background: 'rgba(255,255,255,0.06)', color: '#e2e8f0', textDecoration: 'none', padding: '14px 22px', borderRadius: '999px', border: '1px solid #334155', fontWeight: 800 };
 const trustGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', margin: '44px auto 0', maxWidth: '760px' };
 const trustItem = { background: 'rgba(15,23,42,0.72)', border: '1px solid #334155', borderRadius: '18px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '6px', color: '#94a3b8' };
+
+const featuredSection = { marginTop: '70px', background: 'linear-gradient(135deg, rgba(56,189,248,0.08), rgba(30,41,59,0.92))', border: '1px solid #334155', borderRadius: '30px', padding: '42px' };
+const featuredGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' };
+const featuredCard = { display: 'block', background: '#0f172a', border: '1px solid #334155', borderRadius: '22px', padding: '24px', textDecoration: 'none', boxShadow: '0 14px 32px rgba(0,0,0,0.2)' };
+const featuredTag = { display: 'inline-block', color: '#082f49', background: '#38bdf8', padding: '5px 10px', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 900, marginBottom: '14px' };
+const featuredTitle = { color: '#fff', fontSize: '1.18rem', margin: '0 0 10px' };
+const featuredDesc = { color: '#94a3b8', lineHeight: 1.65, fontSize: '0.92rem', margin: '0 0 14px' };
+const featuredCta = { color: '#38bdf8', fontWeight: 900, fontSize: '0.88rem' };
 
 const wrap = { maxWidth: '1200px', margin: '0 auto', padding: '70px 20px 90px' };
 const introGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '22px' };
