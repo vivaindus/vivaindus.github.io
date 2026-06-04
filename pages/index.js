@@ -81,7 +81,7 @@ export default function Home() {
           </div>
 
           <div style={trustGrid}>
-            <div style={trustItem}><strong>50+ Tools</strong><span>Organized by workflow</span></div>
+            <div style={trustItem}><strong>40+ Tools & Guides</strong><span>Organized by workflow</span></div>
             <div style={trustItem}><strong>Client-Side First</strong><span>Designed for privacy</span></div>
             <div style={trustItem}><strong>No Login Required</strong><span>Open and use instantly</span></div>
           </div>

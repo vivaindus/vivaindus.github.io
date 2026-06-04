@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import RelatedTools from './RelatedTools';
 
 // --- THE TOOL ENGINE ---
 export const toolGroups = {
@@ -130,8 +129,6 @@ export default function ToolboxLayout({ children, title, description }) {
             <main style={{ minHeight: '80vh', paddingTop: '80px' }}>
                 {children}
             </main>
-
-            <RelatedTools />
 
             {/* --- SHARED FOOTER --- */}
             <footer style={footerS}>
