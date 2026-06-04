@@ -53,6 +53,42 @@ function extractCleanExcelReferences(formula) {
 }
 
 
+
+function getCleanFormulaReferences(formula) {
+  const source = String(formula || '');
+  const ranges = [];
+  const cells = [];
+  const protectedParts = [];
+
+  function addRange(value, start, end) {
+    if (!ranges.includes(value)) ranges.push(value);
+    protectedParts.push({ start, end });
+  }
+
+  const sheetRangePattern = /(?:'[^']+'|[A-Za-z_][A-Za-z0-9_ ]*)!\$?[A-Z]{1,3}\$?\d+:\$?[A-Z]{1,3}\$?\d+/g;
+  const rangePattern = /\$?[A-Z]{1,3}\$?\d+:\$?[A-Z]{1,3}\$?\d+/g;
+  const cellPattern = /(?<![A-Za-z0-9_!])\$?[A-Z]{1,3}\$?\d+\b/g;
+
+  let m;
+
+  while ((m = sheetRangePattern.exec(source)) !== null) {
+    addRange(m[0], m.index, m.index + m[0].length);
+  }
+
+  while ((m = rangePattern.exec(source)) !== null) {
+    const inside = protectedParts.some(p => m.index >= p.start && m.index < p.end);
+    if (!inside) addRange(m[0], m.index, m.index + m[0].length);
+  }
+
+  while ((m = cellPattern.exec(source)) !== null) {
+    const inside = protectedParts.some(p => m.index >= p.start && m.index < p.end);
+    if (!inside && !cells.includes(m[0])) cells.push(m[0]);
+  }
+
+  return { references: cells, ranges };
+}
+
+
 export default function ExcelFormulaTool() {
   const [formula, setFormula] = useState(sampleFormula);
   const [indentSize, setIndentSize] = useState(4);
@@ -170,7 +206,7 @@ export default function ExcelFormulaTool() {
 
             <div style={walkCard}>
               <h3>Ranges found</h3>
-              <p>{analysis.ranges.length ? analysis.ranges.join(', ') : 'No direct ranges detected.'}</p>
+              <p>{analysis.ranges.length ? cleanFormulaRefs.ranges.join(', ') : 'No direct ranges detected.'}</p>
             </div>
           </div>
 
