@@ -44,6 +44,18 @@ export const toolGroups = {
             { name: 'Word Counter', href: '/wordcounter', desc: 'Deep linguistic analysis.' },
             { name: 'Password Pro', href: '/passwordgen', desc: 'Encrypted key generation.' },
             { name: 'Unit Converter', href: '/unitconverter', desc: 'Global technical conversion.' },
+            { name: 'CSV to Excel', href: '/csvtoexcel', desc: 'Convert CSV files to XLSX.' },
+            { name: 'CSV to JSON', href: '/csvtojson', desc: 'Convert CSV data to JSON.' },
+            { name: 'Text Diff Checker', href: '/textdiff', desc: 'Compare text differences.' },
+            { name: 'Regex Tester', href: '/regextester', desc: 'Test regular expressions.' },
+            { name: 'JSON Formatter', href: '/jsonformatter', desc: 'Format and validate JSON.' },
+            { name: 'XML Formatter', href: '/xmlformatter', desc: 'Format and validate XML.' },
+            { name: 'Base64 Tool', href: '/base64', desc: 'Encode and decode Base64.' },
+            { name: 'URL Encoder', href: '/urlencoder', desc: 'Encode and decode URLs.' },
+            { name: 'JWT Decoder', href: '/jwtdecoder', desc: 'Decode JSON Web Tokens.' },
+            { name: 'UUID Generator', href: '/uuidgenerator', desc: 'Generate UUIDs and GUIDs.' },
+            { name: 'Code Formatter', href: '/codeformatter', desc: 'Format SQL, JSON and scripts.' },
+            { name: 'Excel Formula', href: '/excelformula', desc: 'Format and explain formulas.' },
         ]
     },
     health: {
