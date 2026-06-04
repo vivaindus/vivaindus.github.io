@@ -12,32 +12,35 @@ function getCleanFormulaReferences(formula) {
   const cells = [];
   const protectedParts = [];
 
-  function addRange(value, start, end) {
-    if (!ranges.includes(value)) ranges.push(value);
+  function addProtectedRange(value, start, end) {
+    const normalized = value.toUpperCase();
+    if (!ranges.includes(normalized)) ranges.push(normalized);
     protectedParts.push({ start, end });
   }
 
-  const sheetRangePattern = /(?:'[^']+'|[A-Za-z_][A-Za-z0-9_ ]*)!\$?[A-Z]{1,3}\$?\d+:\$?[A-Z]{1,3}\$?\d+/g;
-  const rangePattern = /\$?[A-Z]{1,3}\$?\d+:\$?[A-Z]{1,3}\$?\d+/g;
-  const cellPattern = /(?<![A-Za-z0-9_!])\$?[A-Z]{1,3}\$?\d+\b/g;
+  const sheetRangePattern = /(?:'[^']+'|[A-Za-z_][A-Za-z0-9_ ]*)!\$?[A-Z]{1,3}\$?\d+:\$?[A-Z]{1,3}\$?\d+/gi;
+  const rangePattern = /\$?[A-Z]{1,3}\$?\d+:\$?[A-Z]{1,3}\$?\d+/gi;
+  const cellPattern = /(?<![A-Za-z0-9_!])\$?[A-Z]{1,3}\$?\d+\b/gi;
 
   let match;
 
   while ((match = sheetRangePattern.exec(source)) !== null) {
-    addRange(match[0], match.index, match.index + match[0].length);
+    addProtectedRange(match[0], match.index, match.index + match[0].length);
   }
 
   while ((match = rangePattern.exec(source)) !== null) {
-    const insideProtectedRange = protectedParts.some(part => match.index >= part.start && match.index < part.end);
-    if (!insideProtectedRange) {
-      addRange(match[0], match.index, match.index + match[0].length);
+    const insideSheetRange = protectedParts.some(part => match.index >= part.start && match.index < part.end);
+    if (!insideSheetRange) {
+      addProtectedRange(match[0], match.index, match.index + match[0].length);
     }
   }
 
   while ((match = cellPattern.exec(source)) !== null) {
     const insideProtectedRange = protectedParts.some(part => match.index >= part.start && match.index < part.end);
-    if (!insideProtectedRange && !cells.includes(match[0])) {
-      cells.push(match[0]);
+    const normalized = match[0].toUpperCase();
+
+    if (!insideProtectedRange && !cells.includes(normalized)) {
+      cells.push(normalized);
     }
   }
 
