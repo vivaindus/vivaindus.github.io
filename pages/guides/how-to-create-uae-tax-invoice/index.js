@@ -87,31 +87,31 @@ export default function UAETaxInvoiceGuide() {
             <ol style={steps}>
               <li>
                 <strong>Choose the invoice type.</strong>{' '}
-                <span>Use Tax Invoice when VAT details are required. Use a normal invoice, quotation, or receipt only when appropriate.</span>
+                <span> Use Tax Invoice when VAT details are required. Use a normal invoice, quotation, or receipt only when appropriate.</span>
               </li>
               <li>
                 <strong>Add your business details.</strong>{' '}
-                <span>Enter your company name, address, contact details, and TRN if your business is VAT registered.</span>
+                <span> Enter your company name, address, contact details, and TRN if your business is VAT registered.</span>
               </li>
               <li>
                 <strong>Add customer details.</strong>{' '}
-                <span>Enter the customer name and contact information. For B2B customers, add buyer TRN when relevant.</span>
+                <span> Enter the customer name and contact information. For B2B customers, add buyer TRN when relevant.</span>
               </li>
               <li>
-                <strong>Enter products or services.</strong>{' '}
-                <span>Add each item with description, quantity, rate, discount if any, and VAT percentage.</span>
+                <strong> Enter products or services.</strong>{' '}
+                <span> Add each item with description, quantity, rate, discount if any, and VAT percentage.</span>
               </li>
               <li>
                 <strong>Review VAT and totals.</strong>{' '}
-                <span>Check subtotal, VAT total, shipping, round-off, total paid, and balance due before issuing.</span>
+                <span> Check subtotal, VAT total, shipping, round-off, total paid, and balance due before issuing.</span>
               </li>
               <li>
                 <strong>Add branding and signature.</strong>{' '}
-                <span>Upload a logo, add an authorized signature, and write payment instructions or terms.</span>
+                <span> Upload a logo, add an authorized signature, and write payment instructions or terms.</span>
               </li>
               <li>
                 <strong>Print or save as PDF.</strong>{' '}
-                <span>Use your browser print option or PDF download button to save a clean copy for your records.</span>
+                <span> Use your browser print option or PDF download button to save a clean copy for your records.</span>
               </li>
             </ol>
           </section>
