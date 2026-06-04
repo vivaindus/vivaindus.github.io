@@ -69,26 +69,69 @@ function getCleanFormulaReferences(formula) {
   const rangePattern = /\$?[A-Z]{1,3}\$?\d+:\$?[A-Z]{1,3}\$?\d+/g;
   const cellPattern = /(?<![A-Za-z0-9_!])\$?[A-Z]{1,3}\$?\d+\b/g;
 
-  let m;
+  let match;
 
-  while ((m = sheetRangePattern.exec(source)) !== null) {
-    addRange(m[0], m.index, m.index + m[0].length);
+  while ((match = sheetRangePattern.exec(source)) !== null) {
+    addRange(match[0], match.index, match.index + match[0].length);
   }
 
-  while ((m = rangePattern.exec(source)) !== null) {
-    const inside = protectedParts.some(p => m.index >= p.start && m.index < p.end);
-    if (!inside) addRange(m[0], m.index, m.index + m[0].length);
+  while ((match = rangePattern.exec(source)) !== null) {
+    const insideProtectedRange = protectedParts.some(part => match.index >= part.start && match.index < part.end);
+    if (!insideProtectedRange) {
+      addRange(match[0], match.index, match.index + match[0].length);
+    }
   }
 
-  while ((m = cellPattern.exec(source)) !== null) {
-    const inside = protectedParts.some(p => m.index >= p.start && m.index < p.end);
-    if (!inside && !cells.includes(m[0])) cells.push(m[0]);
+  while ((match = cellPattern.exec(source)) !== null) {
+    const insideProtectedRange = protectedParts.some(part => match.index >= part.start && match.index < part.end);
+    if (!insideProtectedRange && !cells.includes(match[0])) {
+      cells.push(match[0]);
+    }
   }
 
-  return { references: cells, ranges };
+  return { cells, ranges };
 }
 
+function getCleanFormulaReferences(formula) {
+  const source = String(formula || '');
+  const ranges = [];
+  const cells = [];
+  const protectedParts = [];
 
+  function addRange(value, start, end) {
+    if (!ranges.includes(value)) ranges.push(value);
+    protectedParts.push({ start, end });
+  }
+
+  const sheetRangePattern = /(?:'[^']+'|[A-Za-z_][A-Za-z0-9_ ]*)!\$?[A-Z]{1,3}\$?\d+:\$?[A-Z]{1,3}\$?\d+/g;
+  const rangePattern = /\$?[A-Z]{1,3}\$?\d+:\$?[A-Z]{1,3}\$?\d+/g;
+  const cellPattern = /(?<![A-Za-z0-9_!])\$?[A-Z]{1,3}\$?\d+\b/g;
+
+  let match;
+
+  while ((match = sheetRangePattern.exec(source)) !== null) {
+    addRange(match[0], match.index, match.index + match[0].length);
+  }
+
+  while ((match = rangePattern.exec(source)) !== null) {
+    const insideRange = protectedParts.some(part => match.index >= part.start && match.index < part.end);
+    if (!insideRange) {
+      addRange(match[0], match.index, match.index + match[0].length);
+    }
+  }
+
+  while ((match = cellPattern.exec(source)) !== null) {
+    const insideRange = protectedParts.some(part => match.index >= part.start && match.index < part.end);
+    if (!insideRange && !cells.includes(match[0])) {
+      cells.push(match[0]);
+    }
+  }
+
+  return {
+    ranges,
+    cells
+  };
+}
 export default function ExcelFormulaTool() {
   const [formula, setFormula] = useState(sampleFormula);
   const [indentSize, setIndentSize] = useState(4);
@@ -201,12 +244,12 @@ export default function ExcelFormulaTool() {
 
             <div style={walkCard}>
               <h3>References found</h3>
-              <p>{extractCleanExcelReferences(formula).length ? extractCleanExcelReferences(formula).join(', ') : 'No cell references detected.'}</p>
+              <p>{getCleanFormulaReferences(formula).cells.length ? getCleanFormulaReferences(formula).cells.join(', ') : 'No individual cell references detected.'}</p>
             </div>
 
             <div style={walkCard}>
               <h3>Ranges found</h3>
-              <p>{analysis.ranges.length ? cleanFormulaRefs.ranges.join(', ') : 'No direct ranges detected.'}</p>
+              <p>{getCleanFormulaReferences(formula).ranges.length ? getCleanFormulaReferences(formula).ranges.join(', ') : 'No direct ranges detected.'}</p>
             </div>
           </div>
 
@@ -382,11 +425,11 @@ function formatFormula(formula, indentSize) {
 }
 
 function detectCellReferences(formula) {
-  return Array.from(new Set((formula.match(/\$?[A-Z]{1,3}\$?\d+/gi) || []).map(ref => ref.toUpperCase()))).sort();
+  return getCleanFormulaReferences(formula).cells;
 }
 
 function detectRanges(formula) {
-  return Array.from(new Set((formula.match(/\$?[A-Z]{1,3}\$?\d+:\$?[A-Z]{1,3}\$?\d+/gi) || []).map(ref => ref.toUpperCase()))).sort();
+  return getCleanFormulaReferences(formula).ranges;
 }
 
 function buildLineByLineExplanation(formattedFormula) {
