@@ -96,6 +96,172 @@ export default function ToolboxLayout({ children, title, description }) {
                 {/* AdSense will be injected here via _document.js or _app.js as we fixed before */}
             </Head>
 
+
+            <style jsx global>{`
+                /* SHB global mobile safety layer */
+                html,
+                body {
+                    max-width: 100%;
+                    overflow-x: hidden;
+                }
+
+                *,
+                *::before,
+                *::after {
+                    box-sizing: border-box;
+                }
+
+                img,
+                canvas,
+                svg,
+                video {
+                    max-width: 100%;
+                    height: auto;
+                }
+
+                input,
+                select,
+                textarea,
+                button {
+                    max-width: 100%;
+                }
+
+                pre,
+                code {
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                    overflow-wrap: anywhere;
+                }
+
+                @media (max-width: 820px) {
+                    body {
+                        overflow-x: hidden;
+                    }
+
+                    main {
+                        padding-top: 70px !important;
+                    }
+
+                    main,
+                    section,
+                    article,
+                    aside,
+                    div {
+                        min-width: 0 !important;
+                    }
+
+                    article,
+                    section,
+                    aside {
+                        max-width: 100% !important;
+                    }
+
+                    h1 {
+                        font-size: clamp(2rem, 10vw, 3.2rem) !important;
+                        line-height: 1.08 !important;
+                    }
+
+                    h2 {
+                        font-size: clamp(1.35rem, 6vw, 2rem) !important;
+                        line-height: 1.18 !important;
+                    }
+
+                    h3 {
+                        line-height: 1.25 !important;
+                    }
+
+                    p,
+                    li,
+                    label,
+                    span {
+                        overflow-wrap: anywhere;
+                    }
+
+                    [style*="grid-template-columns"] {
+                        grid-template-columns: 1fr !important;
+                    }
+
+                    [style*="position: sticky"] {
+                        position: static !important;
+                        top: auto !important;
+                    }
+
+                    [style*="min-width"] {
+                        min-width: 0 !important;
+                    }
+
+                    [style*="max-width"] {
+                        max-width: 100% !important;
+                    }
+
+                    [style*="width: 1200px"],
+                    [style*="width: 1000px"],
+                    [style*="width: 900px"],
+                    [style*="width: 800px"],
+                    [style*="width: 700px"],
+                    [style*="width: 600px"] {
+                        width: 100% !important;
+                    }
+
+                    table {
+                        display: block;
+                        max-width: 100%;
+                        overflow-x: auto;
+                    }
+
+                    textarea {
+                        min-height: 160px !important;
+                    }
+
+                    button,
+                    a {
+                        -webkit-tap-highlight-color: transparent;
+                    }
+                }
+
+                @media (max-width: 520px) {
+                    main {
+                        padding-top: 64px !important;
+                    }
+
+                    nav {
+                        overflow-x: auto;
+                        overflow-y: hidden;
+                    }
+
+                    nav a,
+                    nav button {
+                        white-space: nowrap;
+                    }
+
+                    h1 {
+                        font-size: clamp(1.85rem, 11vw, 2.8rem) !important;
+                    }
+
+                    [style*="padding: 42px"],
+                    [style*="padding: 40px"],
+                    [style*="padding: 36px"],
+                    [style*="padding: 32px"],
+                    [style*="padding: 30px"],
+                    [style*="padding: 28px"] {
+                        padding: 22px !important;
+                    }
+
+                    [style*="border-radius: 28px"],
+                    [style*="border-radius: 24px"],
+                    [style*="border-radius: 22px"] {
+                        border-radius: 18px !important;
+                    }
+
+                    input,
+                    select,
+                    textarea {
+                        font-size: 16px !important;
+                    }
+                }
+            `}</style>
+
+
             {/* --- REFRENS-STYLE TABBED NAVBAR --- */}
             <nav style={navBar}>
                 <div style={navContainer}>
